@@ -1,37 +1,26 @@
-# Build
+# Build output
 bin/
 obj/
 
-# Visual Studio
+# IDE
 .vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-# Rider
-.idea/
-
-# VS Code
 .vscode/
-
-# Logs
-*.log
-
-# NuGet
-*.nupkg
-
-# Publish
-publish/
-
-# Test Results
-TestResults/
+.idea/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Environment
+# Logs
+*.log
+
+# Local environment
 .env
 .env.*
 !.env.example
+
+# Local config
+appsettings.Development.json
+
+# Publish
+publish/
