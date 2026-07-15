@@ -1,8 +1,9 @@
+using System.Text.Json;
 using FleetBackend.Models;
 
-public class SocketMessage<T>
+public class SocketMessage
 {
     public SocketMessageType Type { get; set; }
     public string? RequestId { get; set; }
-    public T Payload { get; set; } = default!;
+    public JsonElement Payload { get; set; }
 }

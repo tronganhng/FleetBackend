@@ -7,6 +7,10 @@ builder.Services.AddSingleton<ICommunicationGateway, CommunicationGateway>();
 
 var app = builder.Build();
 
+// Initialize Services
+var robotManager = app.Services.GetRequiredService<IRobotManager>();
+robotManager.Init();
+
 app.UseWebSockets();
 
 app.Map("/ws", async context =>
@@ -19,6 +23,8 @@ app.Map("/ws", async context =>
 
     var socket = await context.WebSockets.AcceptWebSocketAsync();
     var gateway = context.RequestServices.GetRequiredService<ICommunicationGateway>();
+
+    Console.WriteLine("Unity Connected");
 
     await gateway.HandleClientAsync(socket, context.RequestAborted);
 });

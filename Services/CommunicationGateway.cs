@@ -28,10 +28,6 @@ namespace FleetBackend.Services
 
         public async Task HandleClientAsync(WebSocket socket, CancellationToken cancellationToken)
         {
-            Console.WriteLine("Unity Connected");
-            
-            _robotManager.ClearAll();
-
             var buffer = new byte[4096];
 
             while (!cancellationToken.IsCancellationRequested)
@@ -59,23 +55,27 @@ namespace FleetBackend.Services
 
                 try
                 {
-                    var socketMessage = JsonSerializer.Deserialize<SocketMessage<RobotStateDto>>(message, _jsonOptions);
+                    var socketMessage = JsonSerializer.Deserialize<SocketMessage>(message, _jsonOptions);
 
-                    if (socketMessage?.Type == SocketMessageType.RegisterRobot && socketMessage.Payload is not null)
+                    if (socketMessage is null) continue;
+
+                    switch (socketMessage.Type)
                     {
-                        var robotId = _robotManager.RegisterRobot(socketMessage.Payload);
+                        case SocketMessageType.RegisterRobot:
+                            RobotStateDto? payloadData = socketMessage.Payload.Deserialize<RobotStateDto>(_jsonOptions);
 
-                        var response = new SocketMessage<RobotStateDto>
-                        {
-                            Type = SocketMessageType.None,
-                            RequestId = socketMessage.RequestId,
-                            Payload = new RobotStateDto { RobotId = robotId }
-                        };
+                            if (payloadData == null) continue;
 
-                        var responseJson = JsonSerializer.Serialize(response, _jsonOptions);
-                        var responseBytes = Encoding.UTF8.GetBytes(responseJson);
+                            var robotId = _robotManager.RegisterRobot(payloadData);
+                            var response = new SocketMessage
+                            {
+                                Type = SocketMessageType.None,
+                                RequestId = socketMessage.RequestId,
+                                Payload = JsonSerializer.SerializeToElement(new RobotStateDto { RobotId = robotId }),
+                            };
 
-                        await socket.SendAsync(responseBytes, WebSocketMessageType.Text, true, cancellationToken);
+                            await SendAsync(socket, response, cancellationToken);
+                            break;
                     }
                 }
                 catch (JsonException ex)
@@ -83,6 +83,13 @@ namespace FleetBackend.Services
                     Console.WriteLine($"Invalid message: {ex.Message}");
                 }
             }
+        }
+
+        private async Task SendAsync(WebSocket socket, SocketMessage message, CancellationToken token)
+        {
+            var json = JsonSerializer.Serialize(message, _jsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await socket.SendAsync(bytes, WebSocketMessageType.Text, true, token);
         }
     }
 }
