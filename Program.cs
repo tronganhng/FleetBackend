@@ -3,18 +3,19 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
 
-builder.Services.AddSingleton(new JsonSerializerOptions
+services.AddSingleton(new JsonSerializerOptions
 {
     PropertyNameCaseInsensitive = true,
     Converters = { new JsonStringEnumConverter() }
 });
 
-builder.Services.AddSingleton<IRobotManager, RobotManager>();
-builder.Services.AddSingleton<ICommunicationGateway, CommunicationGateway>();
+services.AddSingleton<IRobotManager, RobotManager>();
+services.AddSingleton<ICommunicationGateway, CommunicationGateway>();
 
-builder.Services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
-builder.Services.AddSingleton<MessageRouter>();
+services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
+services.AddSingleton<MessageRouter>();
 
 var app = builder.Build();
 
