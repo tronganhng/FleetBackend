@@ -15,15 +15,13 @@ namespace FleetBackend.Services
     {
         private readonly IRobotManager _robotManager;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly MessageRouter _messageRouter;
 
-        public CommunicationGateway(IRobotManager robotManager)
+        public CommunicationGateway(IRobotManager robotManager, MessageRouter messageRouter, JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
-            _jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
+            _jsonOptions = jsonOptions;
+            _messageRouter = messageRouter;
         }
 
         public async Task HandleClientAsync(WebSocket socket, CancellationToken cancellationToken)
@@ -59,23 +57,11 @@ namespace FleetBackend.Services
 
                     if (socketMessage is null) continue;
 
-                    switch (socketMessage.Type)
+                    var response = await _messageRouter.RouteAsync(socketMessage);
+
+                    if (response != null)
                     {
-                        case SocketMessageType.RegisterRobot:
-                            RobotStateDto? payloadData = socketMessage.Payload.Deserialize<RobotStateDto>(_jsonOptions);
-
-                            if (payloadData == null) continue;
-
-                            var robotId = _robotManager.RegisterRobot(payloadData);
-                            var response = new SocketMessage
-                            {
-                                Type = SocketMessageType.None,
-                                RequestId = socketMessage.RequestId,
-                                Payload = JsonSerializer.SerializeToElement(new RobotStateDto { RobotId = robotId }),
-                            };
-
-                            await SendAsync(socket, response, cancellationToken);
-                            break;
+                        await SendAsync(socket, response, cancellationToken);
                     }
                 }
                 catch (JsonException ex)

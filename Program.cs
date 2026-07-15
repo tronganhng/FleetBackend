@@ -1,15 +1,22 @@
 using FleetBackend.Services;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton(new JsonSerializerOptions
+{
+    PropertyNameCaseInsensitive = true,
+    Converters = { new JsonStringEnumConverter() }
+});
 
 builder.Services.AddSingleton<IRobotManager, RobotManager>();
 builder.Services.AddSingleton<ICommunicationGateway, CommunicationGateway>();
 
-var app = builder.Build();
+builder.Services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
+builder.Services.AddSingleton<MessageRouter>();
 
-// Initialize Services
-var robotManager = app.Services.GetRequiredService<IRobotManager>();
-robotManager.Init();
+var app = builder.Build();
 
 app.UseWebSockets();
 

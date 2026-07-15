@@ -5,7 +5,6 @@ namespace FleetBackend.Services
 {
     public interface IRobotManager
     {
-        void Init();
         string RegisterRobot(RobotStateDto state);
         void UpdateRobotState(RobotStateDto state);
         RobotStateDto? GetRobot(string robotId);
@@ -16,7 +15,7 @@ namespace FleetBackend.Services
     {
         private readonly Dictionary<string, RobotStateDto> _robots = new(StringComparer.OrdinalIgnoreCase);
 
-        public void Init()
+        public RobotManager()
         {
             ClearAll();
         }
