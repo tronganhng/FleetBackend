@@ -1,6 +1,8 @@
+using FleetBackend.Models;
+
 public class SocketMessage<T>
 {
-    public string Type { get; set; } = string.Empty;
+    public SocketMessageType Type { get; set; }
     public string? RequestId { get; set; }
     public T Payload { get; set; } = default!;
 }
