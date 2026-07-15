@@ -1,41 +1,43 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Net.WebSockets;
+using System.Text;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+var builder = WebApplication.CreateBuilder(args);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.UseWebSockets();
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+app.Map("/ws", async context =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        return;
+    }
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+    Console.WriteLine("Unity Connected");
+
+    var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+    while (await timer.WaitForNextTickAsync())
+    {
+        var robot = new
+        {
+            id = "Robot_01",
+            x = Random.Shared.Next(0, 20),
+            y = 0,
+            z = Random.Shared.Next(0, 20),
+            name = "LATGOTO"
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(robot);
+
+        var bytes = Encoding.UTF8.GetBytes(json);
+
+        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+    }
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
