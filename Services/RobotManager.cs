@@ -9,6 +9,7 @@ namespace FleetBackend.Services
         void UpdateRobotState(RobotStateDto state);
         RobotStateDto? GetRobot(string robotId);
         IEnumerable<RobotStateDto> GetAllRobots();
+        void ClearAll();
     }
 
     public class RobotManager : IRobotManager
@@ -45,5 +46,10 @@ namespace FleetBackend.Services
         }
 
         public IEnumerable<RobotStateDto> GetAllRobots() => _robots.Values;
+
+        public void ClearAll()
+        {
+            _robots.Clear();
+        }
     }
 }

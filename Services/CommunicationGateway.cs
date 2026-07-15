@@ -29,6 +29,8 @@ namespace FleetBackend.Services
         public async Task HandleClientAsync(WebSocket socket, CancellationToken cancellationToken)
         {
             Console.WriteLine("Unity Connected");
+            
+            _robotManager.ClearAll();
 
             var buffer = new byte[4096];
 
@@ -63,11 +65,11 @@ namespace FleetBackend.Services
                     {
                         var robotId = _robotManager.RegisterRobot(socketMessage.Payload);
 
-                        var response = new SocketMessage<RegisterRobotResponse>
+                        var response = new SocketMessage<RobotStateDto>
                         {
                             Type = SocketMessageType.None,
                             RequestId = socketMessage.RequestId,
-                            Payload = new RegisterRobotResponse { RobotId = robotId }
+                            Payload = new RobotStateDto { RobotId = robotId }
                         };
 
                         var responseJson = JsonSerializer.Serialize(response, _jsonOptions);

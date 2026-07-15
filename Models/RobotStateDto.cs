@@ -13,9 +13,4 @@ namespace FleetBackend.Models
         public string? CurrentTaskId { get; set; }
         public DateTime LastHeartbeat { get; set; }
     }
-
-    public class RegisterRobotResponse
-    {
-        public string RobotId { get; set; } = string.Empty;
-    }
 }
