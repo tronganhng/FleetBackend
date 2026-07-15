@@ -2,7 +2,7 @@ using System;
 
 namespace FleetBackend.Models
 {
-    public class RobotState
+    public class RobotStateDto
     {
         public string RobotId { get; set; } = string.Empty;
         public double X { get; set; }

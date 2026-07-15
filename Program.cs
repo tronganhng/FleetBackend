@@ -19,24 +19,20 @@ app.Map("/ws", async context =>
 
     Console.WriteLine("Unity Connected");
 
-    var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+    var buffer = new byte[4096];
 
-    while (await timer.WaitForNextTickAsync())
+    while (true)
     {
-        var robot = new
+        var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
+
+        if (result.MessageType == WebSocketMessageType.Close)
         {
-            id = "Robot_01",
-            x = Random.Shared.Next(0, 20),
-            y = 0,
-            z = Random.Shared.Next(0, 20),
-            name = "LATGOTO"
-        };
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+            break;
+        }
 
-        var json = System.Text.Json.JsonSerializer.Serialize(robot);
-
-        var bytes = Encoding.UTF8.GetBytes(json);
-
-        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+        Console.WriteLine($"Recieve: {message}");
     }
 });
 

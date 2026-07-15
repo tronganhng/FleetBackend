@@ -4,13 +4,13 @@ namespace FleetBackend.Services
 {
     public interface IScheduler
     {
-        RobotState? FindBestRobotForTask(DeliveryTask task);
-        void AssignTask(DeliveryTask task, RobotState robot);
+        RobotStateDto? FindBestRobotForTask(DeliveryTask task);
+        void AssignTask(DeliveryTask task, RobotStateDto robot);
     }
 
     public class Scheduler : IScheduler
     {
-        public RobotState? FindBestRobotForTask(DeliveryTask task) { throw new System.NotImplementedException(); }
-        public void AssignTask(DeliveryTask task, RobotState robot) { throw new System.NotImplementedException(); }
+        public RobotStateDto? FindBestRobotForTask(DeliveryTask task) { throw new System.NotImplementedException(); }
+        public void AssignTask(DeliveryTask task, RobotStateDto robot) { throw new System.NotImplementedException(); }
     }
 }
