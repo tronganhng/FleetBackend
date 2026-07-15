@@ -18,4 +18,10 @@ namespace FleetBackend.Models
         Failed,
         Cancelled
     }
+
+    public enum SocketMessageType
+    {
+        RegisterRobot,
+        RobotState,
+    }
 }
