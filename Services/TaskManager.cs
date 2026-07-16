@@ -36,7 +36,8 @@ namespace FleetBackend.Services
                     task.TaskId = Guid.NewGuid().ToString();
                 }
 
-                task.Status = TaskStatus.Pending;
+                task.CreatedAt = DateTime.UtcNow;
+
                 _tasks.Add(task);
                 _eventBus.Publish(new TaskCreatedEvent(task));
                 return task;

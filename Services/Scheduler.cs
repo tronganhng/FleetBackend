@@ -1,4 +1,5 @@
 using FleetBackend.Models;
+using System.Text.Json;
 
 namespace FleetBackend.Services
 {
@@ -18,12 +19,18 @@ namespace FleetBackend.Services
     public class Scheduler : IScheduler
     {
         private readonly IRobotManager _robotManager;
+        private readonly ITaskManager _taskManager;
         private readonly ILogger<Scheduler> _logger;
+        private readonly ICommunicationGateway _gateway;
+        private readonly JsonSerializerOptions _jsonOptions;
 
-        public Scheduler(IRobotManager robotManager, ILogger<Scheduler> logger, IEventBus eventBus)
+        public Scheduler(IRobotManager robotManager, ITaskManager taskManager, ILogger<Scheduler> logger, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
+            _taskManager = taskManager;
             _logger = logger;
+            _gateway = gateway;
+            _jsonOptions = jsonOptions;
             eventBus.Subscribe<TaskCreatedEvent>(OnTaskCreated);
         }
 
@@ -64,9 +71,31 @@ namespace FleetBackend.Services
         {
             // TODO:
             // 1. Lấy task Pending
-            // 2. Lấy robot Idle
-            // 3. Chọn robot phù hợp
+            var task = _taskManager
+                        .GetPendingTasks()
+                        .OrderByDescending(t => t.Priority)
+                        .ThenBy(t => t.CreatedAt)
+                        .FirstOrDefault();
+            if (task == null) return;
+
+            // 2. Chọn robot phù hợp
+            var bestRobot = _robotManager
+                            .GetAllRobots()
+                            .Where(r => r.Status == RobotStatus.Idle)
+                            .FirstOrDefault();
+            if (bestRobot == null) return;
+
             // 4. Giao task
+            task.AssignedTo(bestRobot);
+
+            var message = new SocketMessage
+            {
+                Type = SocketMessageType.TaskAssigned,
+                RequestId = null,
+                Payload = JsonSerializer.SerializeToElement(task, _jsonOptions)
+            };
+
+            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
         }
 
         public async Task TickAsync(CancellationToken cancellationToken)

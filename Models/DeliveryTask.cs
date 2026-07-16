@@ -10,5 +10,13 @@ namespace FleetBackend.Models
         public int Priority { get; set; }
         public string? AssignedRobotId { get; set; }
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public void AssignedTo(RobotStateDto robotState)
+        {
+            AssignedRobotId = robotState.RobotId;
+            robotState.CurrentTaskId = TaskId;
+            Status = TaskStatus.Assigned;
+        }
     }
 }
