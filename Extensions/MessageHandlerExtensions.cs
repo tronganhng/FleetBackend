@@ -1,0 +1,11 @@
+namespace FleetBackend.Extensions;
+
+public static class MessageHandlerExtensions
+{
+    public static IServiceCollection AddMessageHandlers(this IServiceCollection services)
+    {
+        services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
+        services.AddSingleton<IMessageHandler, CreateTaskHandler>();
+        return services;
+    }
+}

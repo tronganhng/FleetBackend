@@ -1,4 +1,4 @@
-using FleetBackend.Services;
+using FleetBackend.Extensions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,11 +11,9 @@ services.AddSingleton(new JsonSerializerOptions
     Converters = { new JsonStringEnumConverter() }
 });
 
-services.AddSingleton<IRobotManager, RobotManager>();
-services.AddSingleton<ICommunicationGateway, CommunicationGateway>();
-
-services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
-services.AddSingleton<MessageRouter>();
+services.AddFleetCore()
+        .AddCommunication()
+        .AddMessageHandlers();
 
 var app = builder.Build();
 
@@ -25,7 +23,7 @@ app.Map("/ws", async context =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
-        context.Response.StatusCode = 400;
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
         return;
     }
 

@@ -24,5 +24,6 @@ namespace FleetBackend.Models
         None,
         RegisterRobot,
         RobotState,
+        CreateTask,
     }
 }

@@ -5,19 +5,17 @@ using FleetBackend.Services;
 public class RegisterRobotHandler : IMessageHandler
 {
     private readonly IRobotManager _robotManager;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     public SocketMessageType MessageType => SocketMessageType.RegisterRobot;
 
-    public RegisterRobotHandler(IRobotManager robotManager, JsonSerializerOptions jsonOptions)
+    public RegisterRobotHandler(IRobotManager robotManager)
     {
         _robotManager = robotManager;
-        _jsonOptions = jsonOptions;
     }
 
-    public Task<SocketMessage?> HandleAsync(SocketMessage socketMessage)
+    public Task<SocketMessage?> HandleAsync(SocketMessage socketMessage, JsonSerializerOptions jsonOptions)
     {
-        RobotStateDto? payloadData = socketMessage.Payload.Deserialize<RobotStateDto>(_jsonOptions);
+        RobotStateDto? payloadData = socketMessage.Payload.Deserialize<RobotStateDto>(jsonOptions);
 
         if (payloadData != null)
         {
