@@ -45,7 +45,7 @@ public class CommunicationGateway : ICommunicationGateway
                 }
                 catch (WebSocketException ex)
                 {
-                    Console.WriteLine($"WebSocket closed: {ex.Message}");
+                    Logger.Log($"WebSocket closed: {ex.Message}");
                     break;
                 }
 
@@ -56,7 +56,7 @@ public class CommunicationGateway : ICommunicationGateway
                 }
 
                 var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                Console.WriteLine($"Receive: {message}");
+                Logger.Log($"Receive: {message}");
 
                 try
                 {
@@ -73,7 +73,7 @@ public class CommunicationGateway : ICommunicationGateway
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"Invalid message: {ex.Message}");
+                    Logger.Log($"Invalid message: {ex.Message}");
                 }
             }
         }
