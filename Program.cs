@@ -1,4 +1,5 @@
 using FleetBackend.Extensions;
+using FleetBackend.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -16,6 +17,9 @@ services.AddFleetCore()
         .AddMessageHandlers();
 
 var app = builder.Build();
+
+// Ensure Scheduler is instantiated so it can subscribe to TaskCreatedEvent.
+app.Services.GetRequiredService<IScheduler>();
 
 app.UseWebSockets();
 

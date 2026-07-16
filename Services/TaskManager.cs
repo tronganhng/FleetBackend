@@ -14,6 +14,12 @@ namespace FleetBackend.Services
     {
         private readonly List<DeliveryTask> _tasks = new List<DeliveryTask>();
         private readonly object _lockObject = new object();
+        private readonly IEventBus _eventBus;
+        
+        public TaskManager(IEventBus eventBus)
+        {
+            _eventBus = eventBus;
+        }
 
         public DeliveryTask CreateTask(DeliveryTask task)
         {
@@ -32,6 +38,7 @@ namespace FleetBackend.Services
 
                 task.Status = TaskStatus.Pending;
                 _tasks.Add(task);
+                _eventBus.Publish(new TaskCreatedEvent(task));
                 return task;
             }
         }
