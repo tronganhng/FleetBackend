@@ -24,7 +24,7 @@ public class RegisterRobotHandler : IMessageHandler
             {
                 Type = SocketMessageType.None,
                 RequestId = socketMessage.RequestId,
-                Payload = JsonSerializer.SerializeToElement(new RobotStateDto { RobotId = robotId }),
+                Payload = JsonSerializer.SerializeToElement(new RobotStateDto { RobotId = robotId }, jsonOptions),
             };
 
             return Task.FromResult<SocketMessage?>(response);

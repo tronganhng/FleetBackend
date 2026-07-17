@@ -23,7 +23,7 @@ public class CreateTaskHandler : IMessageHandler
             {
                 Type = SocketMessageType.None,
                 RequestId = socketMessage.RequestId,
-                Payload = JsonSerializer.SerializeToElement(task),
+                Payload = JsonSerializer.SerializeToElement(task, jsonOptions),
             };
 
             return Task.FromResult<SocketMessage?>(response);

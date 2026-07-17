@@ -35,6 +35,7 @@ app.Map("/ws", async context =>
     var gateway = context.RequestServices.GetRequiredService<ICommunicationGateway>();
 
     Logger.Log("Unity Connected");
+    app.Services.GetRequiredService<ISessionManager>().Reset();
 
     await gateway.HandleClientAsync(socket, context.RequestAborted);
 });

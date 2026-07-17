@@ -5,6 +5,7 @@ namespace FleetBackend.Services
 {
     public interface ITaskManager
     {
+        void Clear();
         DeliveryTask CreateTask(DeliveryTask task);
         void UpdateTaskStatus(string taskId, TaskStatus status);
         IEnumerable<DeliveryTask> GetPendingTasks();
@@ -19,6 +20,11 @@ namespace FleetBackend.Services
         public TaskManager(IEventBus eventBus)
         {
             _eventBus = eventBus;
+        }
+
+        public void Clear()
+        {
+            _tasks.Clear();
         }
 
         public DeliveryTask CreateTask(DeliveryTask task)
