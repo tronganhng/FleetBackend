@@ -22,7 +22,7 @@ public class RegisterRobotHandler : IMessageHandler
             var robotId = _robotManager.RegisterRobot(payloadData);
             var response = new SocketMessage
             {
-                Type = SocketMessageType.None,
+                Type = SocketMessageType.ServerResponse,
                 RequestId = socketMessage.RequestId,
                 Payload = JsonSerializer.SerializeToElement(new RobotStateDto { RobotId = robotId }, jsonOptions),
             };

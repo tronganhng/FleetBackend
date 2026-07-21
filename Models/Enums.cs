@@ -21,7 +21,7 @@ namespace FleetBackend.Models
 
     public enum SocketMessageType
     {
-        None,
+        ServerResponse,
         RegisterRobot,
         RobotState,
         CreateTask,
