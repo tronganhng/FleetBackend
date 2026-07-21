@@ -8,14 +8,14 @@ namespace FleetBackend.Models
 
     public class MapPointDto
     {
-        public string? PointName { get; }
-        public float[]? Position { get; }
+        public string PointName { get; set; } = string.Empty;
+        public float[] Position { get; set; } = Array.Empty<float>();
     }
 
     public class MapLaneDto
     {
-        public string? StartPoint { get; }
-        public string? EndPoint { get; }
-        public float Distance { get; }
+        public string StartPoint { get; set; } = string.Empty;
+        public string EndPoint { get; set; } = string.Empty;
+        public float Distance { get; set; }
     }
 }
