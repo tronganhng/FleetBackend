@@ -13,10 +13,10 @@ namespace FleetBackend.Services
 
     public class TaskManager : ITaskManager
     {
-        private readonly List<DeliveryTask> _tasks = new List<DeliveryTask>();
+        private readonly List<DeliveryTask> _tasks = new();
         private readonly object _lockObject = new object();
         private readonly IEventBus _eventBus;
-        
+
         public TaskManager(IEventBus eventBus)
         {
             _eventBus = eventBus;

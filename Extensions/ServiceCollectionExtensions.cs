@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEventBus, EventBus>();
         // Managers
         services.AddSingleton<ISessionManager, SessionManager>();
+        services.AddSingleton<IMapManager, MapManager>();
         services.AddSingleton<IRobotManager, RobotManager>();
         services.AddSingleton<ITaskManager, TaskManager>();
         services.AddSingleton<IScheduler, Scheduler>();

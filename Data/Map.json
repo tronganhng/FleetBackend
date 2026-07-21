@@ -1,46 +1,120 @@
 {
   "Points": [
     {
-      "pointName": "room_1",
-      "position": [
+      "PointName": "room_1",
+      "Position": [
         17.21,
         20.33
       ]
     },
     {
-      "pointName": "room_2",
-      "position": [
+      "PointName": "room_2",
+      "Position": [
         17.21,
         10.48
       ]
     },
     {
-      "pointName": "room_3",
-      "position": [
+      "PointName": "room_3",
+      "Position": [
         17.21,
         -1.11
       ]
     },
     {
-      "pointName": "room_4",
-      "position": [
+      "PointName": "room_4",
+      "Position": [
         17.21,
         -12.16
       ]
     },
     {
-      "pointName": "room_5",
-      "position": [
+      "PointName": "room_5",
+      "Position": [
         17.21,
         -21.99
       ]
     },
     {
-      "pointName": "room_6",
-      "position": [
-        -8.05,
-        -0.67
+      "PointName": "room_6",
+      "Position": [
+        -19.42,
+        20.85
       ]
+    },
+    {
+      "PointName": "room_7",
+      "Position": [
+        -19.42,
+        10.24
+      ]
+    },
+    {
+      "PointName": "room_8",
+      "Position": [
+        -19.42,
+        -11.65
+      ]
+    },
+    {
+      "PointName": "junction_1",
+      "Position": [
+        7.53,
+        15.29
+      ]
+    },
+    {
+      "PointName": "junction_2",
+      "Position": [
+        -7.93,
+        15.29
+      ]
+    },
+    {
+      "PointName": "junction_3",
+      "Position": [
+        -7.93,
+        -12.8
+      ]
+    },
+    {
+      "PointName": "junction_4",
+      "Position": [
+        7.9,
+        -12.8
+      ]
+    }
+  ],
+  "Lanes": [
+    {
+      "StartPoint": "room_1",
+      "EndPoint": "junction_1",
+      "Distance": 10.913476
+    },
+    {
+      "StartPoint": "room_2",
+      "EndPoint": "junction_1",
+      "Distance": 10.809185
+    },
+    {
+      "StartPoint": "junction_1",
+      "EndPoint": "junction_2",
+      "Distance": 15.46
+    },
+    {
+      "StartPoint": "junction_3",
+      "EndPoint": "junction_2",
+      "Distance": 28.09
+    },
+    {
+      "StartPoint": "junction_3",
+      "EndPoint": "junction_4",
+      "Distance": 15.83
+    },
+    {
+      "StartPoint": "junction_1",
+      "EndPoint": "junction_4",
+      "Distance": 28.0924377
     }
   ]
 }
