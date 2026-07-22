@@ -82,6 +82,13 @@ namespace FleetBackend.Services
 
             // 2. Chọn robot phù hợp
             var robots = _robotManager.GetAllRobots().Where(r => r.Status == RobotStatus.Idle);
+            
+            if (robots.Count() == 0)
+            {
+                Logger.Log("No idle robots available.");
+                return;
+            }
+
             RobotStateDto? bestRobot = null;
             float bestCost = float.MaxValue;
             foreach (var robot in robots)

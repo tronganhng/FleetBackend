@@ -18,42 +18,42 @@
       "PointName": "room_3",
       "Position": [
         17.21,
-        -1.11
+        -12.16
       ]
     },
     {
       "PointName": "room_4",
       "Position": [
         17.21,
-        -12.16
-      ]
-    },
-    {
-      "PointName": "room_5",
-      "Position": [
-        17.21,
         -21.99
       ]
     },
     {
-      "PointName": "room_6",
+      "PointName": "room_5",
       "Position": [
         -19.42,
         20.85
       ]
     },
     {
-      "PointName": "room_7",
+      "PointName": "room_6",
       "Position": [
         -19.42,
         10.24
       ]
     },
     {
-      "PointName": "room_8",
+      "PointName": "room_7",
       "Position": [
         -19.42,
         -11.65
+      ]
+    },
+    {
+      "PointName": "charging_station",
+      "Position": [
+        -13.84,
+        -21.23
       ]
     },
     {
@@ -117,9 +117,34 @@
       "Distance": 28.0924377
     },
     {
-      "StartPoint": "room_8",
+      "StartPoint": "room_7",
       "EndPoint": "junction_3",
       "Distance": 11.5474062
+    },
+    {
+      "StartPoint": "room_3",
+      "EndPoint": "junction_4",
+      "Distance": 9.331971
+    },
+    {
+      "StartPoint": "room_4",
+      "EndPoint": "junction_4",
+      "Distance": 13.08175
+    },
+    {
+      "StartPoint": "room_5",
+      "EndPoint": "junction_2",
+      "Distance": 12.7645483
+    },
+    {
+      "StartPoint": "room_6",
+      "EndPoint": "junction_2",
+      "Distance": 12.5508
+    },
+    {
+      "StartPoint": "charging_station",
+      "EndPoint": "junction_3",
+      "Distance": 10.29529
     }
   ]
 }

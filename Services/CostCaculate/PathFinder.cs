@@ -1,6 +1,6 @@
 using System.Numerics;
-using FleetBackend.Models;
 using FleetBackend.Services;
+
 public interface IPathFinder
 {
     float GetShortestDistance(string startPoint, string endPoint);

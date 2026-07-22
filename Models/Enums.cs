@@ -26,5 +26,6 @@ namespace FleetBackend.Models
         RobotState,
         CreateTask,
         TaskAssigned,
+        UpdateTask,
     }
 }

@@ -14,14 +14,12 @@ public interface ICommunicationGateway
 
 public class CommunicationGateway : ICommunicationGateway
 {
-    private readonly IRobotManager _robotManager;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly MessageRouter _messageRouter;
     private readonly ConcurrentDictionary<Guid, WebSocket> _sockets = new();
 
-    public CommunicationGateway(IRobotManager robotManager, MessageRouter messageRouter, JsonSerializerOptions jsonOptions)
+    public CommunicationGateway(MessageRouter messageRouter, JsonSerializerOptions jsonOptions)
     {
-        _robotManager = robotManager;
         _jsonOptions = jsonOptions;
         _messageRouter = messageRouter;
     }
