@@ -4,6 +4,7 @@ namespace FleetBackend.Services
 {
     public interface IMapManager
     {
+        bool HasPoint(string pointName);
         MapPointDto GetPoint(string pointName);
         IEnumerable<MapLaneDto> GetConnectedLanes(string pointName);
         MapPointDto? GetRobotPoint(RobotStateDto robot);
@@ -24,6 +25,11 @@ namespace FleetBackend.Services
             var mapDto = FileLoader.Load<MapDto>("Map");
             _points = mapDto.Points;
             _lanes = mapDto.Lanes;
+        }
+
+        public bool HasPoint(string pointName)
+        {
+            return _points.Any(p => p.PointName == pointName);
         }
 
         public MapPointDto GetPoint(string pointName)

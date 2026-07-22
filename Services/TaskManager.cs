@@ -15,10 +15,12 @@ namespace FleetBackend.Services
     {
         private readonly List<DeliveryTask> _tasks = new();
         private readonly object _lockObject = new object();
+        private readonly IMapManager _mapManager;
         private readonly IEventBus _eventBus;
 
-        public TaskManager(IEventBus eventBus)
+        public TaskManager(IMapManager mapManager, IEventBus eventBus)
         {
+            _mapManager = mapManager;
             _eventBus = eventBus;
         }
 
@@ -42,6 +44,13 @@ namespace FleetBackend.Services
                     task.TaskId = Guid.NewGuid().ToString();
                 }
 
+                if (!_mapManager.HasPoint(task.PickupLocation) || !_mapManager.HasPoint(task.Destination))
+                {
+                    Logger.Log("Invalid Point name on create task");
+                    return new();
+                }
+
+                task.TaskId = Guid.NewGuid().ToString();
                 task.CreatedAt = DateTime.UtcNow;
 
                 _tasks.Add(task);
