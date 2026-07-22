@@ -115,6 +115,11 @@
       "StartPoint": "junction_1",
       "EndPoint": "junction_4",
       "Distance": 28.0924377
+    },
+    {
+      "StartPoint": "room_8",
+      "EndPoint": "junction_3",
+      "Distance": 11.5474062
     }
   ]
 }

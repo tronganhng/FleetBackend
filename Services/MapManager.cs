@@ -4,7 +4,9 @@ namespace FleetBackend.Services
 {
     public interface IMapManager
     {
-        bool IsLocationValid(string locationId);
+        MapPointDto GetPoint(string pointName);
+        IEnumerable<MapLaneDto> GetConnectedLanes(string pointName);
+        MapPointDto? GetRobotPoint(RobotStateDto robot);
     }
 
     public class MapManager : IMapManager
@@ -17,13 +19,46 @@ namespace FleetBackend.Services
             LoadMap();
         }
 
-        public bool IsLocationValid(string locationId) { throw new System.NotImplementedException(); }
-
         private void LoadMap()
         {
             var mapDto = FileLoader.Load<MapDto>("Map");
             _points = mapDto.Points;
             _lanes = mapDto.Lanes;
+        }
+
+        public MapPointDto GetPoint(string pointName)
+        {
+            return _points.First(p => p.PointName == pointName);
+        }
+
+        public IEnumerable<MapLaneDto> GetConnectedLanes(string pointName)
+        {
+            return _lanes.Where(l => l.StartPoint == pointName || l.EndPoint == pointName);
+        }
+
+        public MapPointDto? GetRobotPoint(RobotStateDto robot)
+        {
+            MapPointDto? nearest = null;
+            double minDistance = double.MaxValue;
+
+            foreach (var point in _points)
+            {
+                if (point.Position.Length < 2)
+                    continue;
+
+                double dx = robot.X - point.Position[0];
+                double dy = robot.Y - point.Position[1];
+
+                double distance = dx * dx + dy * dy;
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearest = point;
+                }
+            }
+
+            return nearest;
         }
     }
 }

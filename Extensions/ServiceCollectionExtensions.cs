@@ -1,5 +1,4 @@
 using FleetBackend.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace FleetBackend.Extensions;
 

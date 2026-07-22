@@ -22,12 +22,14 @@ namespace FleetBackend.Services
         private readonly ITaskManager _taskManager;
         private readonly ILogger<Scheduler> _logger;
         private readonly ICommunicationGateway _gateway;
+        private readonly ICostCaculator _costCaculator;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public Scheduler(IRobotManager robotManager, ITaskManager taskManager, ILogger<Scheduler> logger, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public Scheduler(IRobotManager robotManager, ITaskManager taskManager, ICostCaculator costCaculator, ILogger<Scheduler> logger, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
             _taskManager = taskManager;
+            _costCaculator = costCaculator;
             _logger = logger;
             _gateway = gateway;
             _jsonOptions = jsonOptions;
@@ -79,10 +81,20 @@ namespace FleetBackend.Services
             if (task == null) return;
 
             // 2. Chọn robot phù hợp
-            var bestRobot = _robotManager
-                            .GetAllRobots()
-                            .Where(r => r.Status == RobotStatus.Idle)
-                            .FirstOrDefault();
+            var robots = _robotManager.GetAllRobots().Where(r => r.Status == RobotStatus.Idle);
+            RobotStateDto? bestRobot = null;
+            float bestCost = float.MaxValue;
+            foreach (var robot in robots)
+            {
+                float cost = _costCaculator.GetCost(task, robot);
+
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
+                    bestRobot = robot;
+                }
+            }
+
             if (bestRobot == null) return;
 
             // 4. Giao task

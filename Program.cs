@@ -14,7 +14,8 @@ services.AddSingleton(new JsonSerializerOptions
 
 services.AddFleetCore()
         .AddCommunication()
-        .AddMessageHandlers();
+        .AddMessageHandlers()
+        .AddAlgorithms();
 
 var app = builder.Build();
 

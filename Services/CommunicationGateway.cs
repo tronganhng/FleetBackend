@@ -56,7 +56,7 @@ public class CommunicationGateway : ICommunicationGateway
                 }
 
                 var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                Logger.Log($"Receive: {message}");
+                // Logger.Log($"Receive: {message}");
 
                 try
                 {
