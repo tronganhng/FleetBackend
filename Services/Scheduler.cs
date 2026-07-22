@@ -7,7 +7,7 @@ namespace FleetBackend.Services
     {
         void OnTaskCreated(TaskCreatedEvent e);
 
-        void OnRobotIdle(RobotStateDto robot);
+        void OnRobotIdle(RobotBackToIdleEvent e);
 
         void OnRobotOffline(RobotStateDto robot);
 
@@ -34,6 +34,7 @@ namespace FleetBackend.Services
             _gateway = gateway;
             _jsonOptions = jsonOptions;
             eventBus.Subscribe<TaskCreatedEvent>(OnTaskCreated);
+            eventBus.Subscribe<RobotBackToIdleEvent>(OnRobotIdle);
         }
 
         public void OnTaskCreated(TaskCreatedEvent e)
@@ -43,9 +44,9 @@ namespace FleetBackend.Services
             Schedule();
         }
 
-        public void OnRobotIdle(RobotStateDto robot)
+        public void OnRobotIdle(RobotBackToIdleEvent e)
         {
-            _logger.LogInformation("Scheduler Trigger : Robot Idle ({RobotId})", robot.RobotId);
+            _logger.LogInformation("Scheduler Trigger : Robot Idle");
 
             Schedule();
         }

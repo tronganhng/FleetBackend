@@ -15,6 +15,12 @@ namespace FleetBackend.Services
     public class RobotManager : IRobotManager
     {
         private readonly Dictionary<string, RobotStateDto> _robots = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IEventBus _eventBus;
+
+        public RobotManager(IEventBus eventBus)
+        {
+            _eventBus = eventBus;
+        }
 
         public void Clear()
         {
@@ -41,7 +47,9 @@ namespace FleetBackend.Services
                 return;
             }
 
+            var previousStatus = _robots[state.RobotId].Status;
             _robots[state.RobotId] = state;
+            if (state.Status == RobotStatus.Idle && previousStatus != RobotStatus.Idle) _eventBus.Publish(new RobotBackToIdleEvent());
         }
 
         public RobotStateDto? GetRobot(string robotId)
