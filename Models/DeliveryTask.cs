@@ -24,5 +24,11 @@ namespace FleetBackend.Models
             AssignedRobotId = null;
             Status = TaskStatus.Pending;
         }
+
+        public void Cancel()
+        {
+            AssignedRobotId = null;
+            Status = TaskStatus.Cancelled;
+        }
     }
 }

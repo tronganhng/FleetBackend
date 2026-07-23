@@ -6,6 +6,7 @@ public static class MessageHandlerExtensions
     {
         services.AddSingleton<IMessageHandler, RegisterRobotHandler>();
         services.AddSingleton<IMessageHandler, CreateTaskHandler>();
+        services.AddSingleton<IMessageHandler, CancelTaskHandler>();
         services.AddSingleton<IMessageHandler, UpdateTaskHandler>();
         services.AddSingleton<IMessageHandler, SyncRobotStateHandler>();
         return services;

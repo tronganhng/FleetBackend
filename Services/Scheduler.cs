@@ -53,15 +53,11 @@ namespace FleetBackend.Services
 
         public void OnRobotOffline(RobotStateDto robot)
         {
-            _logger.LogWarning("Robot Timeout: ({RobotId})", robot.RobotId);
+            _logger.LogWarning("Robot Timeout: ({RobotId}) with task: {Task}", robot.RobotId, robot.CurrentTaskId ?? "No Task");
 
             // TODO:
             // Reassign unfinished task
-            if (robot.CurrentTaskId == null)
-            {
-                Logger.Log("Robot offline with no task");
-                return;
-            }
+            if (robot.CurrentTaskId == null) return;
 
             DeliveryTask? task = _taskManager.GetTask(robot.CurrentTaskId);
 
