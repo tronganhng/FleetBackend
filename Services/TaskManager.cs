@@ -7,6 +7,7 @@ namespace FleetBackend.Services
     {
         void Clear();
         DeliveryTask CreateTask(DeliveryTask task);
+        DeliveryTask? GetTask(string id);
         void UpdateTaskStatus(string taskId, TaskStatus status);
         IEnumerable<DeliveryTask> GetPendingTasks();
     }
@@ -57,6 +58,11 @@ namespace FleetBackend.Services
                 _eventBus.Publish(new TaskCreatedEvent(task));
                 return task;
             }
+        }
+
+        public DeliveryTask? GetTask(string id)
+        {
+            return _tasks.Find(t => t.TaskId == id);
         }
 
         public void UpdateTaskStatus(string taskId, TaskStatus status)

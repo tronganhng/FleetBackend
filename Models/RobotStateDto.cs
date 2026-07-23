@@ -12,5 +12,10 @@ namespace FleetBackend.Models
         public RobotStatus Status { get; set; }
         public string? CurrentTaskId { get; set; }
         public DateTime LastHeartbeat { get; set; }
+
+        public void ClearCurrentTask()
+        {
+            CurrentTaskId = null;
+        }
     }
 }

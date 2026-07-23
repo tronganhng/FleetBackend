@@ -57,8 +57,20 @@ namespace FleetBackend.Services
 
             // TODO:
             // Reassign unfinished task
+            if (robot.CurrentTaskId == null)
+            {
+                Logger.Log("Robot offline with no task");
+                return;
+            }
 
-            // Schedule();
+            DeliveryTask? task = _taskManager.GetTask(robot.CurrentTaskId);
+
+            if (task == null || task.Status != Models.TaskStatus.Running) return;
+
+            robot.ClearCurrentTask();
+            task.ResetTask();
+
+            Schedule();
         }
 
         public void OnRobotStateChanged(RobotStateDto robot)
