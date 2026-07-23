@@ -18,5 +18,11 @@ namespace FleetBackend.Models
             robotState.CurrentTaskId = TaskId;
             Status = TaskStatus.Assigned;
         }
+
+        public void ResetTask()
+        {
+            AssignedRobotId = null;
+            Status = TaskStatus.Pending;
+        }
     }
 }

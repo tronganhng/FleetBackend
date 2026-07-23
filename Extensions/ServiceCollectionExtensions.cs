@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IEventBus, EventBus>();
         // Managers
+        services.AddHostedService<FleetBackgroundService>();
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<IMapManager, MapManager>();
         services.AddSingleton<IRobotManager, RobotManager>();

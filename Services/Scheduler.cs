@@ -13,7 +13,7 @@ namespace FleetBackend.Services
 
         void OnRobotStateChanged(RobotStateDto robot);
 
-        Task TickAsync(CancellationToken cancellationToken);
+        void Tick();
     }
 
     public class Scheduler : IScheduler
@@ -53,12 +53,12 @@ namespace FleetBackend.Services
 
         public void OnRobotOffline(RobotStateDto robot)
         {
-            _logger.LogWarning("Scheduler Trigger : Robot Offline ({RobotId})", robot.RobotId);
+            _logger.LogWarning("Robot Timeout: ({RobotId})", robot.RobotId);
 
             // TODO:
             // Reassign unfinished task
 
-            Schedule();
+            // Schedule();
         }
 
         public void OnRobotStateChanged(RobotStateDto robot)
@@ -68,6 +68,27 @@ namespace FleetBackend.Services
             // Charging
             // Pause
             // Resume
+        }
+
+        public void Tick()
+        {
+            CheckHeartbeat();
+        }
+
+        private void CheckHeartbeat()
+        {
+            foreach (var robot in _robotManager.GetAllRobots())
+            {
+                if (robot.Status == RobotStatus.Offline)
+                    continue;
+
+                if (DateTime.UtcNow - robot.LastHeartbeat > TimeSpan.FromSeconds(5))
+                {
+                    robot.Status = RobotStatus.Offline;
+
+                    OnRobotOffline(robot);
+                }
+            }
         }
 
         private void Schedule()
@@ -83,7 +104,7 @@ namespace FleetBackend.Services
 
             // 2. Chọn robot phù hợp
             var robots = _robotManager.GetAllRobots().Where(r => r.Status == RobotStatus.Idle);
-            
+
             if (robots.Count() == 0)
             {
                 Logger.Log("No idle robots available.");
@@ -116,31 +137,6 @@ namespace FleetBackend.Services
             };
 
             _ = _gateway.BroadcastAsync(message, CancellationToken.None);
-        }
-
-        public async Task TickAsync(CancellationToken cancellationToken)
-        {
-            CheckHeartbeat();
-
-            await Task.CompletedTask;
-        }
-
-        private void CheckHeartbeat()
-        {
-            foreach (var robot in _robotManager.GetAllRobots())
-            {
-                if (robot.Status == RobotStatus.Offline)
-                    continue;
-
-                if (DateTime.UtcNow - robot.LastHeartbeat > TimeSpan.FromSeconds(5))
-                {
-                    robot.Status = RobotStatus.Offline;
-
-                    _logger.LogWarning("Robot {RobotId} timeout.", robot.RobotId);
-
-                    OnRobotOffline(robot);
-                }
-            }
         }
     }
 }
