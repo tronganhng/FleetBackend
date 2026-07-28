@@ -9,6 +9,7 @@ public static class MessageHandlerExtensions
         services.AddSingleton<IMessageHandler, CancelTaskHandler>();
         services.AddSingleton<IMessageHandler, UpdateTaskHandler>();
         services.AddSingleton<IMessageHandler, SyncRobotStateHandler>();
+        services.AddSingleton<IMessageHandler, ResourceAccessHandler>();
         return services;
     }
 }

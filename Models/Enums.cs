@@ -28,5 +28,6 @@ namespace FleetBackend.Models
         TaskAssigned,
         UpdateTask,
         CancelTask,
+        ResourceAccess,
     }
 }

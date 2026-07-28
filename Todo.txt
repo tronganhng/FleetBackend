@@ -1,0 +1,12 @@
+P1 (Ưu tiên cao nhất):
+. Hoàn thiện TrafficManager.cs (Node/Lane Locking).
+. Bổ sung REST APIs cho Dashboard (Program.cs).
+. Tích hợp Database (Entity Framework Core) cho Persistence.
+
+P2 (Trung bình):
+. Bổ sung cơ chế Auto-Charging & Ngưỡng Pin trong Scheduler.cs
+. Mở rộng Task Workflow (State Machine đa bước).
+
+P3 (Nâng cao):
+. Hỗ trợ Multi-floor & Thang máy.
+. Nâng cấp thuật toán lập lịch MRTA (Hungarian Algorithm).
