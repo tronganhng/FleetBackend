@@ -4,6 +4,7 @@ namespace FleetBackend.Services
 {
     public interface ITrafficManager
     {
+        void Clear();
         bool RequestAccess(string robotId, string resourceId);
         bool ReleaseAccess(string robotId, string resourceId);
         bool IsResourceLocked(string resourceId);
@@ -16,6 +17,11 @@ namespace FleetBackend.Services
     public class TrafficManager : ITrafficManager
     {
         private readonly ConcurrentDictionary<string, ResourceLock> _locks = new();
+
+        public void Clear()
+        {
+            _locks.Clear();
+        }
 
         public bool RequestAccess(string robotId, string resourceId)
         {
