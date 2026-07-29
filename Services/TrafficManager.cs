@@ -6,91 +6,84 @@ namespace FleetBackend.Services
     {
         void Clear();
         bool RequestAccess(string robotId, string resourceId);
-        bool ReleaseAccess(string robotId, string resourceId);
-        bool IsResourceLocked(string resourceId);
-        string? GetResourceOwner(string resourceId);
-        void ForceReleaseRobot(string robotId);
+        string ReleaseAccess(string robotId, string resourceId);
     }
 
-    public record ResourceLock(string ResourceId, string RobotId, DateTime LockedAt);
 
     public class TrafficManager : ITrafficManager
     {
-        private readonly ConcurrentDictionary<string, ResourceLock> _locks = new();
+        private class ResourceState
+        {
+            public string ResourceId { get; }
+
+            public string OwnerRobotId { get; set; }
+
+            public Queue<string> WaitingRobots { get; } = new();
+
+            public DateTime AcquiredTime { get; set; }
+
+            public ResourceState(string resourceId, string ownerRobotId)
+            {
+                ResourceId = resourceId;
+                OwnerRobotId = ownerRobotId;
+                AcquiredTime = DateTime.UtcNow;
+            }
+        }
+
+        private readonly ConcurrentDictionary<string, ResourceState> _resources = new();
 
         public void Clear()
         {
-            _locks.Clear();
+            _resources.Clear();
         }
 
         public bool RequestAccess(string robotId, string resourceId)
         {
-            if (string.IsNullOrWhiteSpace(robotId) || string.IsNullOrWhiteSpace(resourceId))
+            if (string.IsNullOrWhiteSpace(robotId) ||
+                string.IsNullOrWhiteSpace(resourceId))
             {
                 return false;
             }
 
-            var newLock = new ResourceLock(resourceId, robotId, DateTime.UtcNow);
+            var resource = _resources.GetOrAdd(resourceId, _ => new ResourceState(resourceId, robotId));
 
-            if (_locks.TryAdd(resourceId, newLock))
+            lock (resource)
             {
-                return true;
-            }
+                // Nếu vừa tạo thì robot này đã là owner
+                if (resource.OwnerRobotId == robotId)
+                    return true;
 
-            if (_locks.TryGetValue(resourceId, out var existingLock) && existingLock.RobotId == robotId)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool ReleaseAccess(string robotId, string resourceId)
-        {
-            if (string.IsNullOrWhiteSpace(robotId) || string.IsNullOrWhiteSpace(resourceId))
-            {
-                return false;
-            }
-
-            if (_locks.TryGetValue(resourceId, out var existingLock))
-            {
-                if (existingLock.RobotId == robotId)
+                if (!resource.WaitingRobots.Contains(robotId))
                 {
-                    return _locks.TryRemove(resourceId, out _);
+                    resource.WaitingRobots.Enqueue(robotId);
                 }
-            }
 
-            return false;
-        }
-
-        public bool IsResourceLocked(string resourceId)
-        {
-            if (string.IsNullOrWhiteSpace(resourceId))
                 return false;
-
-            return _locks.ContainsKey(resourceId);
+            }
         }
 
-        public string? GetResourceOwner(string resourceId)
+        public string ReleaseAccess(string robotId, string resourceId)
         {
-            if (string.IsNullOrWhiteSpace(resourceId))
-                return null;
+            if (!_resources.TryGetValue(resourceId, out var resource))
+                return string.Empty;
 
-            return _locks.TryGetValue(resourceId, out var existingLock) ? existingLock.RobotId : null;
-        }
-
-        public void ForceReleaseRobot(string robotId)
-        {
-            if (string.IsNullOrWhiteSpace(robotId))
-                return;
-
-            var keysToRemove = _locks.Where(kvp => kvp.Value.RobotId == robotId)
-                                     .Select(kvp => kvp.Key)
-                                     .ToList();
-
-            foreach (var key in keysToRemove)
+            lock (resource)
             {
-                _locks.TryRemove(key, out _);
+                if (resource.OwnerRobotId != robotId)
+                    return string.Empty;
+
+                if (resource.WaitingRobots.Count == 0)
+                {
+                    _resources.TryRemove(resourceId, out _);
+                    return string.Empty;
+                }
+
+                var nextRobot = resource.WaitingRobots.Dequeue();
+
+                resource.OwnerRobotId = nextRobot;
+                resource.AcquiredTime = DateTime.UtcNow;
+
+                return nextRobot;
             }
         }
     }

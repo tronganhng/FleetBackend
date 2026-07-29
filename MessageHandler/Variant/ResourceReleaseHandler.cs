@@ -18,12 +18,12 @@ public class ResourceReleaseHandler : IMessageHandler
         ResourceAccessRequest? payloadData = socketMessage.Payload.Deserialize<ResourceAccessRequest>(jsonOptions);
         if (payloadData != null)
         {
-            bool isReleased = _trafficManager.ReleaseAccess(payloadData.RobotId, payloadData.PointName);
+            string nextRobot = _trafficManager.ReleaseAccess(payloadData.RobotId, payloadData.PointName);
             var response = new SocketMessage
             {
                 Type = SocketMessageType.ServerResponse,
                 RequestId = socketMessage.RequestId,
-                Payload = JsonSerializer.SerializeToElement(isReleased, jsonOptions),
+                Payload = JsonSerializer.SerializeToElement(nextRobot, jsonOptions),
             };
             return Task.FromResult<SocketMessage?>(response);
         }
