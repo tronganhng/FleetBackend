@@ -2,8 +2,15 @@ namespace FleetBackend.Models
 {
     public class MapDto
     {
-        public List<MapPointDto> Points { get; set; } = new();
+        public List<MapNodeDto> Nodes { get; set; } = new();
         public List<MapLaneDto> Lanes { get; set; } = new();
+    }
+
+    public class MapNodeDto
+    {
+        public string NodeName { get; set; } = string.Empty;
+        public float[] Position { get; set; } = Array.Empty<float>();
+        public List<MapPointDto> MapPoints { get; set; } = new();
     }
 
     public class MapPointDto
@@ -14,8 +21,8 @@ namespace FleetBackend.Models
 
     public class MapLaneDto
     {
-        public string StartPoint { get; set; } = string.Empty;
-        public string EndPoint { get; set; } = string.Empty;
+        public string StartNode { get; set; } = string.Empty;
+        public string EndNode { get; set; } = string.Empty;
         public float Distance { get; set; }
     }
 }

@@ -4,15 +4,15 @@ namespace FleetBackend.Services
 {
     public interface IMapManager
     {
-        bool HasPoint(string pointName);
-        MapPointDto GetPoint(string pointName);
-        IEnumerable<MapLaneDto> GetConnectedLanes(string pointName);
-        MapPointDto? GetRobotPoint(RobotStateDto robot);
+        bool HasNode(string nodeName);
+        MapNodeDto GetNode(string nodeName);
+        IEnumerable<MapLaneDto> GetConnectedLanes(string nodeName);
+        MapNodeDto? GetRobotNode(RobotStateDto robot);
     }
 
     public class MapManager : IMapManager
     {
-        private List<MapPointDto> _points = new();
+        private List<MapNodeDto> _nodes = new();
         private List<MapLaneDto> _lanes = new();
 
         public MapManager()
@@ -23,31 +23,31 @@ namespace FleetBackend.Services
         private void LoadMap()
         {
             var mapDto = FileLoader.Load<MapDto>("Map");
-            _points = mapDto.Points;
+            _nodes = mapDto.Nodes;
             _lanes = mapDto.Lanes;
         }
 
-        public bool HasPoint(string pointName)
+        public bool HasNode(string nodeName)
         {
-            return _points.Any(p => p.PointName == pointName);
+            return _nodes.Any(p => p.NodeName == nodeName);
         }
 
-        public MapPointDto GetPoint(string pointName)
+        public MapNodeDto GetNode(string nodeName)
         {
-            return _points.First(p => p.PointName == pointName);
+            return _nodes.First(p => p.NodeName == nodeName);
         }
 
-        public IEnumerable<MapLaneDto> GetConnectedLanes(string pointName)
+        public IEnumerable<MapLaneDto> GetConnectedLanes(string nodeName)
         {
-            return _lanes.Where(l => l.StartPoint == pointName || l.EndPoint == pointName);
+            return _lanes.Where(l => l.StartNode == nodeName || l.EndNode == nodeName);
         }
 
-        public MapPointDto? GetRobotPoint(RobotStateDto robot)
+        public MapNodeDto? GetRobotNode(RobotStateDto robot)
         {
-            MapPointDto? nearest = null;
+            MapNodeDto? nearest = null;
             double minDistance = double.MaxValue;
 
-            foreach (var point in _points)
+            foreach (var point in _nodes)
             {
                 if (point.Position.Length < 2)
                     continue;

@@ -3,7 +3,7 @@ using FleetBackend.Services;
 
 public interface IPathFinder
 {
-    float GetShortestDistance(string startPoint, string endPoint);
+    float GetShortestDistance(string startNode, string endNode);
 }
 
 
@@ -16,29 +16,29 @@ public class AStarPathFinder : IPathFinder
         _mapManager = mapManager;
     }
 
-    public float GetShortestDistance(string startPoint, string endPoint)
+    public float GetShortestDistance(string startNode, string endNode)
     {
-        if (startPoint == endPoint)
+        if (startNode == endNode)
             return 0f;
 
         var open = new PriorityQueue<string, float>();
         var gScore = new Dictionary<string, float>();
 
-        open.Enqueue(startPoint, 0);
-        gScore[startPoint] = 0;
+        open.Enqueue(startNode, 0);
+        gScore[startNode] = 0;
 
         while (open.Count > 0)
         {
             var current = open.Dequeue();
 
-            if (current == endPoint)
+            if (current == endNode)
                 return gScore[current];
 
             foreach (var lane in _mapManager.GetConnectedLanes(current))
             {
-                var neighbor = lane.StartPoint == current
-                    ? lane.EndPoint
-                    : lane.StartPoint;
+                var neighbor = lane.StartNode == current
+                    ? lane.EndNode
+                    : lane.StartNode;
 
                 float newCost = gScore[current] + lane.Distance;
 
@@ -46,7 +46,7 @@ public class AStarPathFinder : IPathFinder
                 {
                     gScore[neighbor] = newCost;
 
-                    float heuristic = EstimateDistance(neighbor, endPoint);
+                    float heuristic = EstimateDistance(neighbor, endNode);
 
                     open.Enqueue(neighbor, newCost + heuristic);
                 }
@@ -58,9 +58,9 @@ public class AStarPathFinder : IPathFinder
 
     private float EstimateDistance(string from, string to)
     {
-        var p1 = _mapManager.GetPoint(from);
-        var p2 = _mapManager.GetPoint(to);
+        var n1 = _mapManager.GetNode(from);
+        var n2 = _mapManager.GetNode(to);
 
-        return Vector2.Distance(new Vector2(p1.Position[0], p1.Position[1]), new Vector2(p2.Position[0], p2.Position[1]));
+        return Vector2.Distance(new Vector2(n1.Position[0], n1.Position[1]), new Vector2(n2.Position[0], n2.Position[1]));
     }
 }

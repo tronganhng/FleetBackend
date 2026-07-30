@@ -45,7 +45,7 @@ namespace FleetBackend.Services
                     task.TaskId = Guid.NewGuid().ToString();
                 }
 
-                if (!_mapManager.HasPoint(task.PickupLocation) || !_mapManager.HasPoint(task.Destination))
+                if (!_mapManager.HasNode(task.PickupLocation) || !_mapManager.HasNode(task.Destination))
                 {
                     Logger.Log("Invalid Point name on create task");
                     return new();

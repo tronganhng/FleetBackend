@@ -1,150 +1,162 @@
 {
-  "Points": [
+  "Nodes": [
     {
-      "PointName": "room_1",
+      "NodeName": "room1",
       "Position": [
         17.21,
         20.33
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_2",
+      "NodeName": "room2",
       "Position": [
         17.21,
         10.48
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_3",
+      "NodeName": "room3",
       "Position": [
         17.21,
         -12.16
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_4",
+      "NodeName": "room4",
       "Position": [
         17.21,
         -21.99
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_5",
+      "NodeName": "room6",
       "Position": [
         -19.42,
         20.85
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_6",
+      "NodeName": "room7",
       "Position": [
         -19.42,
         10.24
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "room_7",
+      "NodeName": "room8",
       "Position": [
         -19.42,
         -11.65
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "charging_station",
+      "NodeName": "charging_station",
       "Position": [
         -13.84,
         -21.23
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "junction_1",
+      "NodeName": "junction1",
       "Position": [
         7.53,
         15.29
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "junction_2",
+      "NodeName": "junction2",
       "Position": [
         -7.93,
         15.29
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "junction_3",
+      "NodeName": "junction3",
       "Position": [
         -7.93,
         -12.8
-      ]
+      ],
+      "MapPoints": []
     },
     {
-      "PointName": "junction_4",
+      "NodeName": "junction4",
       "Position": [
         7.9,
         -12.8
-      ]
+      ],
+      "MapPoints": []
     }
   ],
   "Lanes": [
     {
-      "StartPoint": "room_1",
-      "EndPoint": "junction_1",
-      "Distance": 10.913476
+      "StartNode": "junction3",
+      "EndNode": "charging_station",
+      "Distance": 10.29529
     },
     {
-      "StartPoint": "room_2",
-      "EndPoint": "junction_1",
-      "Distance": 10.809185
-    },
-    {
-      "StartPoint": "junction_1",
-      "EndPoint": "junction_2",
-      "Distance": 15.46
-    },
-    {
-      "StartPoint": "junction_3",
-      "EndPoint": "junction_2",
-      "Distance": 28.09
-    },
-    {
-      "StartPoint": "junction_3",
-      "EndPoint": "junction_4",
-      "Distance": 15.83
-    },
-    {
-      "StartPoint": "junction_1",
-      "EndPoint": "junction_4",
-      "Distance": 28.0924377
-    },
-    {
-      "StartPoint": "room_7",
-      "EndPoint": "junction_3",
+      "StartNode": "junction3",
+      "EndNode": "room8",
       "Distance": 11.5474062
     },
     {
-      "StartPoint": "room_3",
-      "EndPoint": "junction_4",
+      "StartNode": "junction3",
+      "EndNode": "junction4",
+      "Distance": 15.83
+    },
+    {
+      "StartNode": "junction4",
+      "EndNode": "room3",
       "Distance": 9.331971
     },
     {
-      "StartPoint": "room_4",
-      "EndPoint": "junction_4",
+      "StartNode": "junction4",
+      "EndNode": "room4",
       "Distance": 13.08175
     },
     {
-      "StartPoint": "room_5",
-      "EndPoint": "junction_2",
+      "StartNode": "junction3",
+      "EndNode": "junction2",
+      "Distance": 28.09
+    },
+    {
+      "StartNode": "junction2",
+      "EndNode": "room6",
       "Distance": 12.7645483
     },
     {
-      "StartPoint": "room_6",
-      "EndPoint": "junction_2",
+      "StartNode": "junction2",
+      "EndNode": "room7",
       "Distance": 12.5508
     },
     {
-      "StartPoint": "charging_station",
-      "EndPoint": "junction_3",
-      "Distance": 10.29529
+      "StartNode": "junction2",
+      "EndNode": "junction1",
+      "Distance": 15.46
+    },
+    {
+      "StartNode": "junction1",
+      "EndNode": "junction4",
+      "Distance": 28.0924377
+    },
+    {
+      "StartNode": "junction1",
+      "EndNode": "room1",
+      "Distance": 10.913476
+    },
+    {
+      "StartNode": "junction1",
+      "EndNode": "room2",
+      "Distance": 10.809185
     }
   ]
 }
