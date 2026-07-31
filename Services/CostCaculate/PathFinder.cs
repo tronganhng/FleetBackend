@@ -34,7 +34,7 @@ public class AStarPathFinder : IPathFinder
             if (current == endNode)
                 return gScore[current];
 
-            foreach (var lane in _mapManager.GetConnectedLanes(current))
+            foreach (var lane in _mapManager.Graph.GetConnectedLanes(current))
             {
                 var neighbor = lane.StartNode == current
                     ? lane.EndNode
@@ -58,8 +58,8 @@ public class AStarPathFinder : IPathFinder
 
     private float EstimateDistance(string from, string to)
     {
-        var n1 = _mapManager.GetNode(from);
-        var n2 = _mapManager.GetNode(to);
+        var n1 = _mapManager.Graph.GetNode(from);
+        var n2 = _mapManager.Graph.GetNode(to);
 
         return Vector2.Distance(new Vector2(n1.Position[0], n1.Position[1]), new Vector2(n2.Position[0], n2.Position[1]));
     }

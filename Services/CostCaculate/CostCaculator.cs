@@ -31,7 +31,7 @@ public class CostCaculator : ICostCaculator
 
     private float DistanceCost(DeliveryTask task, RobotStateDto robot)
     {
-        var robotNode = _mapManager.GetRobotNode(robot);
+        var robotNode = _mapManager.Graph.GetRobotNode(robot);
 
         if (robotNode == null) return float.MaxValue;
 

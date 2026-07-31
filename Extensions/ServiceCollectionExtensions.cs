@@ -1,4 +1,5 @@
 using FleetBackend.Services;
+using FleetBackend.Services.Map;
 
 namespace FleetBackend.Extensions;
 
@@ -11,6 +12,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<FleetBackgroundService>();
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<IMapManager, MapManager>();
+        services.AddSingleton<IGraphManager, GraphManager>();
+        services.AddSingleton<IDockManager, DockManager>();
         services.AddSingleton<IRobotManager, RobotManager>();
         services.AddSingleton<ITaskManager, TaskManager>();
         services.AddSingleton<ITrafficManager, TrafficManager>();
