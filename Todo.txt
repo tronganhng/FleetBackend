@@ -10,3 +10,6 @@ P2 (Trung bình):
 P3 (Nâng cao):
 . Hỗ trợ Multi-floor & Thang máy.
 . Nâng cấp thuật toán lập lịch MRTA (Hungarian Algorithm).
+
+
+- release dock point khi robot hết pin và mang đi sạc
