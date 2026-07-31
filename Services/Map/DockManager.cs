@@ -5,17 +5,18 @@ namespace FleetBackend.Services.Map
 {
     public interface IDockManager
     {
+        void Clear();
         MapPointDto? AcquireDock(string nodeName);
-        void ReleaseDock(string dockName);
-        MapPointDto? GetDock(string dockName);
+        void ReleaseDock(string nodeName, string dockName);
+        MapPointDto? GetDock(string nodeName, string dockName);
         IEnumerable<MapPointDto> GetDocks(string nodeName);
     }
 
     public class DockManager : IDockManager
     {
         private readonly Dictionary<string, List<MapPointDto>> _nodeDocks = new();
-        private readonly Dictionary<string, MapPointDto> _dockLookup = new();
-        private readonly ConcurrentDictionary<string, bool> _occupied = new();
+        private readonly Dictionary<(string Node, string Dock), MapPointDto> _dockLookup = new();
+        private readonly ConcurrentDictionary<(string Node, string Dock), bool> _occupied = new();
 
         public DockManager()
         {
@@ -38,9 +39,19 @@ namespace FleetBackend.Services.Map
 
                 foreach (var dock in docks)
                 {
-                    _dockLookup[dock.PointName] = dock;
-                    _occupied[dock.PointName] = false;
+                    var key = (node.NodeName, dock.PointName);
+
+                    _dockLookup[key] = dock;
+                    _occupied[key] = false;
                 }
+            }
+        }
+
+        public void Clear()
+        {
+            foreach (var key in _occupied.Keys)
+            {
+                _occupied[key] = false;
             }
         }
 
@@ -51,7 +62,9 @@ namespace FleetBackend.Services.Map
 
             foreach (var dock in docks)
             {
-                if (_occupied.TryUpdate(dock.PointName, true, false))
+                var key = (nodeName, dock.PointName);
+
+                if (_occupied.TryUpdate(key, true, false))
                 {
                     return dock;
                 }
@@ -60,26 +73,27 @@ namespace FleetBackend.Services.Map
             return null;
         }
 
-        public void ReleaseDock(string dockName)
+        public void ReleaseDock(string nodeName, string dockName)
         {
-            if (_occupied.ContainsKey(dockName))
+            var key = (nodeName, dockName);
+
+            if (_occupied.ContainsKey(key))
             {
-                _occupied[dockName] = false;
+                _occupied[key] = false;
             }
         }
 
-        public MapPointDto? GetDock(string dockName)
+        public MapPointDto? GetDock(string nodeName, string dockName)
         {
-            _dockLookup.TryGetValue(dockName, out var dock);
+            _dockLookup.TryGetValue((nodeName, dockName), out var dock);
             return dock;
         }
 
         public IEnumerable<MapPointDto> GetDocks(string nodeName)
         {
-            if (_nodeDocks.TryGetValue(nodeName, out var docks))
-                return docks;
-
-            return Enumerable.Empty<MapPointDto>();
+            return _nodeDocks.TryGetValue(nodeName, out var docks)
+                ? docks
+                : Enumerable.Empty<MapPointDto>();
         }
     }
 }

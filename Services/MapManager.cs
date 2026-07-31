@@ -4,8 +4,9 @@ namespace FleetBackend.Services
 {
     public interface IMapManager
     {
-        public IGraphManager Graph { get; }
-        public IDockManager Dock { get; }
+        IGraphManager Graph { get; }
+        IDockManager Dock { get; }
+        void Clear();
     }
 
     public class MapManager : IMapManager
@@ -17,6 +18,11 @@ namespace FleetBackend.Services
         {
             Graph = graph;
             Dock = dock;
+        }
+
+        public void Clear()
+        {
+            Dock.Clear();
         }
     }
 }

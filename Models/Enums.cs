@@ -30,5 +30,6 @@ namespace FleetBackend.Models
         CancelTask,
         ResourceAccess,
         ResourceRelease,
+        AcquireDockPoint,
     }
 }
