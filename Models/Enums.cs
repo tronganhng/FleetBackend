@@ -31,5 +31,6 @@ namespace FleetBackend.Models
         ResourceAccess,
         ResourceRelease,
         AcquireDockPoint,
+        ReleaseDockPoint,
     }
 }
