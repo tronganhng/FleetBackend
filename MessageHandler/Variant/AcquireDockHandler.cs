@@ -19,17 +19,19 @@ public class AcquireDockHandler : IMessageHandler
         if (nodeName != null)
         {
             MapPointDto? point = _mapManager.Dock.AcquireDock(nodeName);
-            if (point != null)
-            {
-                var response = new SocketMessage
-                {
-                    Type = SocketMessageType.ServerResponse,
-                    RequestId = socketMessage.RequestId,
-                    Payload = JsonSerializer.SerializeToElement(point, jsonOptions),
-                };
 
-                return Task.FromResult<SocketMessage?>(response);
-            }
+            MapPointDto resPoint = new MapPointDto();
+
+            if (point != null) resPoint = point;
+
+            var response = new SocketMessage
+            {
+                Type = SocketMessageType.ServerResponse,
+                RequestId = socketMessage.RequestId,
+                Payload = JsonSerializer.SerializeToElement(resPoint, jsonOptions),
+            };
+
+            return Task.FromResult<SocketMessage?>(response);
         }
 
         return Task.FromResult<SocketMessage?>(null);

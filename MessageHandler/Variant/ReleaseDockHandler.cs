@@ -19,7 +19,16 @@ public class ReleaseDockHandler : IMessageHandler
 
         if (payloadData != null)
         {
-            _mapManager.Dock.ReleaseDock(payloadData.NodeName, payloadData.PointName);
+            bool isReleased = _mapManager.Dock.ReleaseDock(payloadData.NodeName, payloadData.PointName);
+
+            var response = new SocketMessage
+            {
+                Type = SocketMessageType.ServerResponse,
+                RequestId = socketMessage.RequestId,
+                Payload = JsonSerializer.SerializeToElement(isReleased, jsonOptions),
+            };
+
+            return Task.FromResult<SocketMessage?>(response);
         }
 
         return Task.FromResult<SocketMessage?>(null);

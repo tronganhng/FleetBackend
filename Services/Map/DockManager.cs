@@ -7,7 +7,7 @@ namespace FleetBackend.Services.Map
     {
         void Clear();
         MapPointDto? AcquireDock(string nodeName);
-        void ReleaseDock(string nodeName, string dockName);
+        bool ReleaseDock(string nodeName, string dockName);
         MapPointDto? GetDock(string nodeName, string dockName);
         IEnumerable<MapPointDto> GetDocks(string nodeName);
     }
@@ -73,14 +73,11 @@ namespace FleetBackend.Services.Map
             return null;
         }
 
-        public void ReleaseDock(string nodeName, string dockName)
+        public bool ReleaseDock(string nodeName, string dockName)
         {
             var key = (nodeName, dockName);
 
-            if (_occupied.ContainsKey(key))
-            {
-                _occupied[key] = false;
-            }
+            return _occupied.TryUpdate(key, false, true);
         }
 
         public MapPointDto? GetDock(string nodeName, string dockName)
