@@ -12,4 +12,4 @@ P3 (Nâng cao):
 . Nâng cấp thuật toán lập lịch MRTA (Hungarian Algorithm).
 
 
-- release dock point khi robot hết pin và mang đi sạc
+- waiting zone
