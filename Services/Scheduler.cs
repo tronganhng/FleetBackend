@@ -48,6 +48,8 @@ namespace FleetBackend.Services
         {
             _logger.LogInformation("Scheduler Trigger : Robot Idle");
 
+            // check and move robot to waiting area
+
             Schedule();
         }
 
