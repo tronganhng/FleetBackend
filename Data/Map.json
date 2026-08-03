@@ -1,6 +1,36 @@
 {
   "Nodes": [
     {
+      "NodeName": "waiting_zone",
+      "Position": [
+        14.12515,
+        -1.712679
+      ],
+      "MapPoints": [
+        {
+          "PointName": "point1",
+          "Position": [
+            20.81515,
+            1.527321
+          ]
+        },
+        {
+          "PointName": "point2",
+          "Position": [
+            20.94515,
+            -1.712679
+          ]
+        },
+        {
+          "PointName": "point3",
+          "Position": [
+            21.05515,
+            -5.182679
+          ]
+        }
+      ]
+    },
+    {
       "NodeName": "room1",
       "Position": [
         13.29,
@@ -262,6 +292,16 @@
       "StartNode": "junction1",
       "EndNode": "room2",
       "Distance": 8.059684
+    },
+    {
+      "StartNode": "waiting_zone",
+      "EndNode": "junction4",
+      "Distance": 12.7153912
+    },
+    {
+      "StartNode": "waiting_zone",
+      "EndNode": "junction1",
+      "Distance": 18.23697
     }
   ]
 }
