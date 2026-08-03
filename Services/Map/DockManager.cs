@@ -8,6 +8,7 @@ namespace FleetBackend.Services.Map
         void Clear();
         MapPointDto? AcquireDock(string nodeName);
         bool ReleaseDock(string nodeName, string dockName);
+        bool IsNodeFull(string nodeName);
         MapPointDto? GetDock(string nodeName, string dockName);
         IEnumerable<MapPointDto> GetDocks(string nodeName);
     }
@@ -91,6 +92,14 @@ namespace FleetBackend.Services.Map
             return _nodeDocks.TryGetValue(nodeName, out var docks)
                 ? docks
                 : Enumerable.Empty<MapPointDto>();
+        }
+
+        public bool IsNodeFull(string nodeName)
+        {
+            if (!_nodeDocks.TryGetValue(nodeName, out var docks))
+                return false;
+
+            return docks.All(dock => _occupied.TryGetValue((nodeName, dock.PointName), out var isOccupied) && isOccupied);
         }
     }
 }

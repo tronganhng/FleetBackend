@@ -32,5 +32,6 @@ namespace FleetBackend.Models
         ResourceRelease,
         AcquireDockPoint,
         ReleaseDockPoint,
+        CheckNodeFull,
     }
 }

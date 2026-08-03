@@ -2,13 +2,13 @@ using FleetBackend.Models;
 using FleetBackend.Services;
 using System.Text.Json;
 
-public class AcquireDockHandler : IMessageHandler
+public class CheckNodeFullHandler : IMessageHandler
 {
-    public SocketMessageType MessageType => SocketMessageType.AcquireDockPoint;
+    public SocketMessageType MessageType => SocketMessageType.CheckNodeFull;
 
     private readonly IMapManager _mapManager;
 
-    public AcquireDockHandler(IMapManager mapManager)
+    public CheckNodeFullHandler(IMapManager mapManager)
     {
         _mapManager = mapManager;
     }
@@ -18,17 +18,13 @@ public class AcquireDockHandler : IMessageHandler
         string? nodeName = socketMessage.Payload.Deserialize<string>(jsonOptions);
         if (nodeName != null)
         {
-            MapPointDto? point = _mapManager.Dock.AcquireDock(nodeName);
-
-            MapPointDto resPoint = new MapPointDto();
-
-            if (point != null) resPoint = point;
+            bool isNodeFull = _mapManager.Dock.IsNodeFull(nodeName);
 
             var response = new SocketMessage
             {
                 Type = SocketMessageType.ServerResponse,
                 RequestId = socketMessage.RequestId,
-                Payload = JsonSerializer.SerializeToElement(resPoint, jsonOptions),
+                Payload = JsonSerializer.SerializeToElement(isNodeFull, jsonOptions),
             };
 
             return Task.FromResult<SocketMessage?>(response);
