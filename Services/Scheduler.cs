@@ -1,4 +1,5 @@
 using FleetBackend.Models;
+using FleetBackend.Services.Task;
 using System.Text.Json;
 
 namespace FleetBackend.Services
@@ -19,18 +20,22 @@ namespace FleetBackend.Services
     public class Scheduler : IScheduler
     {
         private readonly IRobotManager _robotManager;
+        private readonly IMapManager _mapManager;
         private readonly ITaskManager _taskManager;
         private readonly ILogger<Scheduler> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ICommunicationGateway _gateway;
         private readonly ICostCaculator _costCaculator;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public Scheduler(IRobotManager robotManager, ITaskManager taskManager, ICostCaculator costCaculator, ILogger<Scheduler> logger, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public Scheduler(IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, ICostCaculator costCaculator, ILogger<Scheduler> logger, ILoggerFactory loggerFactory, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
+            _mapManager = mapManager;
             _taskManager = taskManager;
             _costCaculator = costCaculator;
             _logger = logger;
+            _loggerFactory = loggerFactory;
             _gateway = gateway;
             _jsonOptions = jsonOptions;
             eventBus.Subscribe<TaskCreatedEvent>(OnTaskCreated);
@@ -137,16 +142,10 @@ namespace FleetBackend.Services
             if (bestRobot == null) return;
 
             // 4. Giao task
+            var executor = new TaskExecutor(task, _robotManager, _mapManager, _gateway, _loggerFactory.CreateLogger<TaskExecutor>(), _jsonOptions);
             task.AssignedTo(bestRobot);
-
-            var message = new SocketMessage
-            {
-                Type = SocketMessageType.TaskAssigned,
-                RequestId = null,
-                Payload = JsonSerializer.SerializeToElement(task, _jsonOptions)
-            };
-
-            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+            task.AssignExecutor(executor);
+            executor.Execute();
         }
     }
 }

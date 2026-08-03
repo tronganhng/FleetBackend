@@ -33,5 +33,6 @@ namespace FleetBackend.Models
         AcquireDockPoint,
         ReleaseDockPoint,
         CheckNodeFull,
+        MoveRobot,
     }
 }
