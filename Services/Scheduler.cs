@@ -74,6 +74,7 @@ namespace FleetBackend.Services
 
             robot.ClearCurrentTask();
             task.ResetTask();
+            _taskExecuteManager.RemoveExecutor(robot.RobotId);
 
             Schedule();
         }

@@ -6,7 +6,9 @@ namespace FleetBackend.Services
 {
     public interface ITaskExecuteManager
     {
+        void Clear();
         void ExecuteTask(DeliveryTask task, ICommunicationGateway gateway);
+        void RemoveExecutor(string robotId);
         void OnRobotArrived(string robotId);
     }
 
@@ -27,11 +29,17 @@ namespace FleetBackend.Services
             _jsonOptions = jsonOptions;
         }
 
+        public void Clear()
+        {
+            _executors.Clear();
+        }
+
         public void ExecuteTask(DeliveryTask task, ICommunicationGateway gateway)
         {
             if (task.AssignedRobotId == null) return;
 
             var executor = new TaskExecutor(task, _robotManager, _mapManager, _taskManager, gateway, _jsonOptions);
+            executor.OnCompleted = RemoveExecutor;
             _executors[task.AssignedRobotId] = executor;
             executor.Execute();
         }
@@ -42,6 +50,16 @@ namespace FleetBackend.Services
             {
                 executor.OnRobotArrived();
             }
+        }
+
+        private void RemoveExecutor(TaskExecutor executor)
+        {
+            if (!_executors.Remove(executor.RobotId)) return;
+        }
+
+        public void RemoveExecutor(string robotId)
+        {
+            _executors.Remove(robotId);
         }
     }
 }

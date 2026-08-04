@@ -24,6 +24,10 @@ namespace FleetBackend.Services.Task
         private RobotStateDto? _robot;
         private TaskExecutorStep _step;
 
+        public string RobotId => _task.AssignedRobotId ?? string.Empty;
+
+        public Action<TaskExecutor>? OnCompleted { get; set; }
+
         public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _task = task;
@@ -116,6 +120,8 @@ namespace FleetBackend.Services.Task
         {
             _step = TaskExecutorStep.Completed;
             _taskManager.UpdateTaskStatus(_task.TaskId, Models.TaskStatus.Completed);
+            OnCompleted?.Invoke(this);
+            OnCompleted = null;
         }
 
         private void SendMoveCommand(float[] position)

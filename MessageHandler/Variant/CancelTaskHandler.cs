@@ -7,11 +7,13 @@ public class CancelTaskHandler : IMessageHandler
     public SocketMessageType MessageType => SocketMessageType.CancelTask;
 
     private readonly ITaskManager _taskManager;
+    private readonly ITaskExecuteManager _taskExecuteManager;
     private readonly IRobotManager _robotManager;
 
-    public CancelTaskHandler(ITaskManager taskManager, IRobotManager robotManager)
+    public CancelTaskHandler(ITaskManager taskManager, ITaskExecuteManager taskExecuteManager, IRobotManager robotManager)
     {
         _taskManager = taskManager;
+        _taskExecuteManager = taskExecuteManager;
         _robotManager = robotManager;
     }
 
@@ -24,7 +26,20 @@ public class CancelTaskHandler : IMessageHandler
             if (task != null)
             {
                 task.Cancel();
-                if (task.AssignedRobotId != null) _robotManager.GetRobot(task.AssignedRobotId)?.ClearCurrentTask();
+                if (task.AssignedRobotId != null) 
+                {
+                    _robotManager.GetRobot(task.AssignedRobotId)?.ClearCurrentTask();
+                    _taskExecuteManager.RemoveExecutor(task.AssignedRobotId);
+                }
+                
+                var response = new SocketMessage
+                {
+                    Type = SocketMessageType.ServerResponse,
+                    RequestId = socketMessage.RequestId,
+                    Payload = JsonSerializer.SerializeToElement(task, jsonOptions),
+                };
+
+                return Task.FromResult<SocketMessage?>(response);
             }
 
         }

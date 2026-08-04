@@ -11,13 +11,15 @@ namespace FleetBackend.Services
         private readonly ITaskManager _taskManager;
         private readonly ITrafficManager _trafficManager;
         private readonly IMapManager _mapManager;
+        private readonly ITaskExecuteManager _taskExecuteManager;
 
-        public SessionManager(IRobotManager robotManager, ITaskManager taskManager, ITrafficManager trafficManager, IMapManager mapManager)
+        public SessionManager(IRobotManager robotManager, ITaskManager taskManager, ITrafficManager trafficManager, IMapManager mapManager, ITaskExecuteManager taskExecuteManager)
         {
             _robotManager = robotManager;
             _taskManager = taskManager;
             _trafficManager = trafficManager;
             _mapManager = mapManager;
+            _taskExecuteManager = taskExecuteManager;
         }
 
         public void Reset()
@@ -26,6 +28,7 @@ namespace FleetBackend.Services
             _taskManager.Clear();
             _trafficManager.Clear();
             _mapManager.Clear();
+            _taskExecuteManager.Clear();
         }
     }
 }
