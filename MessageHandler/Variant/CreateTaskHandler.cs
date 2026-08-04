@@ -18,15 +18,7 @@ public class CreateTaskHandler : IMessageHandler
         DeliveryTask? payloadData = socketMessage.Payload.Deserialize<DeliveryTask>(jsonOptions);
         if (payloadData != null)
         {
-            var task = _taskManager.CreateTask(payloadData);
-            var response = new SocketMessage
-            {
-                Type = SocketMessageType.ServerResponse,
-                RequestId = socketMessage.RequestId,
-                Payload = JsonSerializer.SerializeToElement(task, jsonOptions),
-            };
-
-            return Task.FromResult<SocketMessage?>(response);
+            _taskManager.CreateTask(payloadData);
         }
 
         return Task.FromResult<SocketMessage?>(null);

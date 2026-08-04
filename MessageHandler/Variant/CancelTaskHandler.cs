@@ -25,14 +25,6 @@ public class CancelTaskHandler : IMessageHandler
             {
                 task.Cancel();
                 if (task.AssignedRobotId != null) _robotManager.GetRobot(task.AssignedRobotId)?.ClearCurrentTask();
-                var response = new SocketMessage
-                {
-                    Type = SocketMessageType.ServerResponse,
-                    RequestId = socketMessage.RequestId,
-                    Payload = JsonSerializer.SerializeToElement(task, jsonOptions),
-                };
-
-                return Task.FromResult<SocketMessage?>(response);
             }
 
         }
