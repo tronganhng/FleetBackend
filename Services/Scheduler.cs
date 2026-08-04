@@ -142,9 +142,8 @@ namespace FleetBackend.Services
             if (bestRobot == null) return;
 
             // 4. Giao task
-            var executor = new TaskExecutor(task, _robotManager, _mapManager, _gateway, _loggerFactory.CreateLogger<TaskExecutor>(), _jsonOptions);
             task.AssignedTo(bestRobot);
-            task.AssignExecutor(executor);
+            var executor = new TaskExecutor(task, _robotManager, _mapManager, _gateway, _loggerFactory.CreateLogger<TaskExecutor>(), _jsonOptions);
             executor.Execute();
         }
     }

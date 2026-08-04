@@ -46,6 +46,7 @@ namespace FleetBackend.Services.Task
             {
                 Type = SocketMessageType.MoveRobot,
                 RequestId = null,
+                RobotId = robot.RobotId,
                 Payload = JsonSerializer.SerializeToElement(startNode.Position, _jsonOptions)
             };
 
