@@ -144,15 +144,6 @@ namespace FleetBackend.Services
 
             // 4. Giao task
             task.AssignedTo(bestRobot);
-
-            var message = new SocketMessage
-            {
-                Type = SocketMessageType.TaskAssigned,
-                RequestId = null,
-                Payload = JsonSerializer.SerializeToElement(task, _jsonOptions)
-            };
-            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
-
             _taskExecuteManager.ExecuteTask(task, _gateway);
         }
     }

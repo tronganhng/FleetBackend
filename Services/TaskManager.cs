@@ -1,5 +1,6 @@
 using FleetBackend.Models;
 using TaskStatus = FleetBackend.Models.TaskStatus;
+using System.Text.Json;
 
 namespace FleetBackend.Services
 {
@@ -17,12 +18,16 @@ namespace FleetBackend.Services
         private readonly List<DeliveryTask> _tasks = new();
         private readonly object _lockObject = new object();
         private readonly IMapManager _mapManager;
+        private readonly ICommunicationGateway _gateway;
+        private readonly JsonSerializerOptions _jsonOptions;
         private readonly IEventBus _eventBus;
 
-        public TaskManager(IMapManager mapManager, IEventBus eventBus)
+        public TaskManager(IMapManager mapManager, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _mapManager = mapManager;
             _eventBus = eventBus;
+            _gateway = gateway;
+            _jsonOptions = jsonOptions;
         }
 
         public void Clear()
@@ -56,6 +61,8 @@ namespace FleetBackend.Services
 
                 _tasks.Add(task);
                 _eventBus.Publish(new TaskCreatedEvent(task));
+
+                SendMessage(task);
                 return task;
             }
         }
@@ -81,6 +88,8 @@ namespace FleetBackend.Services
                 }
 
                 task.Status = status;
+
+                SendMessage(task);
             }
         }
 
@@ -92,6 +101,17 @@ namespace FleetBackend.Services
                     .Where(t => t.Status == TaskStatus.Pending)
                     .ToList();
             }
+        }
+
+        private void SendMessage(DeliveryTask task)
+        {
+            var message = new SocketMessage
+            {
+                Type = SocketMessageType.UpdateTask,
+                RequestId = null,
+                Payload = JsonSerializer.SerializeToElement(task, _jsonOptions)
+            };
+            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
         }
     }
 }
