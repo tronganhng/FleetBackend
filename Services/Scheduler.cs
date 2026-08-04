@@ -67,7 +67,7 @@ namespace FleetBackend.Services
             if (task == null || task.Status != Models.TaskStatus.Running) return;
 
             robot.ClearCurrentTask();
-            task.ResetTask();
+            _taskManager.ResetTask(task);
             _taskExecuteManager.RemoveExecutor(robot.RobotId);
 
             Schedule();
@@ -139,7 +139,7 @@ namespace FleetBackend.Services
             if (bestRobot == null) return;
 
             // 4. Giao task
-            task.AssignedTo(bestRobot);
+            _taskManager.AssignTaskToRobot(task, bestRobot);
             _taskExecuteManager.ExecuteTask(task);
         }
     }

@@ -11,6 +11,9 @@ namespace FleetBackend.Services
         DeliveryTask? GetTask(string id);
         void UpdateTaskStatus(string taskId, TaskStatus status);
         IEnumerable<DeliveryTask> GetPendingTasks();
+        void AssignTaskToRobot(DeliveryTask task, RobotStateDto robotState);
+        void CancelTask(DeliveryTask task);
+        void ResetTask(DeliveryTask task);
     }
 
     public class TaskManager : ITaskManager
@@ -107,6 +110,24 @@ namespace FleetBackend.Services
                     .Where(t => t.Status == TaskStatus.Pending)
                     .ToList();
             }
+        }
+
+        public void AssignTaskToRobot(DeliveryTask task, RobotStateDto robotState)
+        {
+            task.AssignedTo(robotState);
+            SendMessage(task);
+        }
+
+        public void CancelTask(DeliveryTask task)
+        {
+            task.Cancel();
+            SendMessage(task);
+        }
+
+        public void ResetTask(DeliveryTask task)
+        {
+            task.ResetTask();
+            SendMessage(task);
         }
 
         private void SendMessage(DeliveryTask task)

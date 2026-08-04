@@ -25,7 +25,7 @@ public class CancelTaskHandler : IMessageHandler
             var task = _taskManager.GetTask(payloadData.TaskId);
             if (task != null)
             {
-                task.Cancel();
+                _taskManager.CancelTask(task);
                 if (task.AssignedRobotId != null) 
                 {
                     _robotManager.GetRobot(task.AssignedRobotId)?.ClearCurrentTask();
