@@ -7,7 +7,7 @@ namespace FleetBackend.Services
     public interface ITaskExecuteManager
     {
         void Clear();
-        void ExecuteTask(DeliveryTask task, ICommunicationGateway gateway);
+        void ExecuteTask(DeliveryTask task);
         void RemoveExecutor(string robotId);
         void OnRobotArrived(string robotId);
     }
@@ -19,13 +19,15 @@ namespace FleetBackend.Services
         private readonly IRobotManager _robotManager;
         private readonly IMapManager _mapManager;
         private readonly ITaskManager _taskManager;
+        private readonly ICommunicationGateway _gateway;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public TaskExecuteManager(IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, JsonSerializerOptions jsonOptions)
+        public TaskExecuteManager(IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
             _mapManager = mapManager;
             _taskManager = taskManager;
+            _gateway = gateway;
             _jsonOptions = jsonOptions;
         }
 
@@ -34,11 +36,11 @@ namespace FleetBackend.Services
             _executors.Clear();
         }
 
-        public void ExecuteTask(DeliveryTask task, ICommunicationGateway gateway)
+        public void ExecuteTask(DeliveryTask task)
         {
             if (task.AssignedRobotId == null) return;
 
-            var executor = new TaskExecutor(task, _robotManager, _mapManager, _taskManager, gateway, _jsonOptions);
+            var executor = new TaskExecutor(task, _robotManager, _mapManager, _taskManager, _gateway, _jsonOptions);
             executor.OnCompleted = RemoveExecutor;
             _executors[task.AssignedRobotId] = executor;
             executor.Execute();

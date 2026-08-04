@@ -15,8 +15,8 @@ namespace FleetBackend.Services
 
     public class TaskManager : ITaskManager
     {
-        private readonly List<DeliveryTask> _tasks = new();
-        private readonly object _lockObject = new object();
+        private readonly Dictionary<string, DeliveryTask> _tasks = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _lockObject = new();
         private readonly IMapManager _mapManager;
         private readonly ICommunicationGateway _gateway;
         private readonly JsonSerializerOptions _jsonOptions;
@@ -59,7 +59,7 @@ namespace FleetBackend.Services
                 task.TaskId = Guid.NewGuid().ToString();
                 task.CreatedAt = DateTime.UtcNow;
 
-                _tasks.Add(task);
+                _tasks[task.TaskId] = task;
                 _eventBus.Publish(new TaskCreatedEvent(task));
 
                 SendMessage(task);
@@ -69,7 +69,13 @@ namespace FleetBackend.Services
 
         public DeliveryTask? GetTask(string id)
         {
-            return _tasks.Find(t => t.TaskId == id);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return null;
+            }
+
+            _tasks.TryGetValue(id, out var task);
+            return task;
         }
 
         public void UpdateTaskStatus(string taskId, TaskStatus status)
@@ -81,8 +87,7 @@ namespace FleetBackend.Services
 
             lock (_lockObject)
             {
-                var task = _tasks.FirstOrDefault(t => t.TaskId == taskId);
-                if (task == null)
+                if (!_tasks.TryGetValue(taskId, out var task))
                 {
                     throw new KeyNotFoundException($"Task with ID '{taskId}' not found.");
                 }
@@ -98,6 +103,7 @@ namespace FleetBackend.Services
             lock (_lockObject)
             {
                 return _tasks
+                    .Values
                     .Where(t => t.Status == TaskStatus.Pending)
                     .ToList();
             }

@@ -24,11 +24,9 @@ namespace FleetBackend.Services
         private readonly ITaskManager _taskManager;
         private readonly ITaskExecuteManager _taskExecuteManager;
         private readonly ILogger<Scheduler> _logger;
-        private readonly ICommunicationGateway _gateway;
         private readonly ICostCaculator _costCaculator;
-        private readonly JsonSerializerOptions _jsonOptions;
 
-        public Scheduler(IRobotManager robotManager, IMapManager mapManager, ITaskExecuteManager taskExecuteManager, ITaskManager taskManager, ICostCaculator costCaculator, ILogger<Scheduler> logger, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public Scheduler(IRobotManager robotManager, IMapManager mapManager, ITaskExecuteManager taskExecuteManager, ITaskManager taskManager, ICostCaculator costCaculator, ILogger<Scheduler> logger, IEventBus eventBus)
         {
             _robotManager = robotManager;
             _mapManager = mapManager;
@@ -36,8 +34,6 @@ namespace FleetBackend.Services
             _taskExecuteManager = taskExecuteManager;
             _costCaculator = costCaculator;
             _logger = logger;
-            _gateway = gateway;
-            _jsonOptions = jsonOptions;
             eventBus.Subscribe<TaskCreatedEvent>(OnTaskCreated);
             eventBus.Subscribe<RobotBackToIdleEvent>(OnRobotIdle);
         }
@@ -144,7 +140,7 @@ namespace FleetBackend.Services
 
             // 4. Giao task
             task.AssignedTo(bestRobot);
-            _taskExecuteManager.ExecuteTask(task, _gateway);
+            _taskExecuteManager.ExecuteTask(task);
         }
     }
 }
