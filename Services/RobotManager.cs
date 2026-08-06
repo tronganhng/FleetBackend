@@ -8,13 +8,13 @@ namespace FleetBackend.Services
         void Clear();
         string RegisterRobot(RobotStateDto state);
         void UpdateRobotState(RobotStateDto state);
-        RobotStateDto? GetRobot(string robotId);
-        IEnumerable<RobotStateDto> GetAllRobots();
+        Robot? GetRobot(string robotId);
+        IEnumerable<Robot> GetAllRobots();
     }
 
     public class RobotManager : IRobotManager
     {
-        private readonly Dictionary<string, RobotStateDto> _robots = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Robot> _robots = new(StringComparer.OrdinalIgnoreCase);
         private readonly IEventBus _eventBus;
 
         public RobotManager(IEventBus eventBus)
@@ -35,7 +35,7 @@ namespace FleetBackend.Services
 
             state.RobotId = robotId;
             state.LastHeartbeat = state.LastHeartbeat == default ? DateTime.UtcNow : state.LastHeartbeat;
-            _robots[robotId] = state;
+            _robots[robotId] = new Robot(state);
 
             return robotId;
         }
@@ -47,17 +47,17 @@ namespace FleetBackend.Services
                 return;
             }
 
-            var previousStatus = _robots[state.RobotId].Status;
-            _robots[state.RobotId].CopyFrom(state);
-            if (state.Status == RobotStatus.Idle && previousStatus != RobotStatus.Idle) _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId]));
+            var previousStatus = _robots[state.RobotId].State.Status;
+            _robots[state.RobotId].State.CopyFrom(state);
+            if (state.Status == RobotStatus.Idle && previousStatus != RobotStatus.Idle) _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId].State));
         }
 
-        public RobotStateDto? GetRobot(string robotId)
+        public Robot? GetRobot(string robotId)
         {
             _robots.TryGetValue(robotId, out var robot);
             return robot;
         }
 
-        public IEnumerable<RobotStateDto> GetAllRobots() => _robots.Values;
+        public IEnumerable<Robot> GetAllRobots() => _robots.Values;
     }
 }

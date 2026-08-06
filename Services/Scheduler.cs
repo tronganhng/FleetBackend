@@ -10,7 +10,7 @@ namespace FleetBackend.Services
 
         void OnRobotIdle(RobotBackToIdleEvent e);
 
-        void OnRobotOffline(RobotStateDto robot);
+        void OnRobotOffline(Robot robot);
 
         void OnRobotStateChanged(RobotStateDto robot);
 
@@ -54,21 +54,21 @@ namespace FleetBackend.Services
             Schedule();
         }
 
-        public void OnRobotOffline(RobotStateDto robot)
+        public void OnRobotOffline(Robot robot)
         {
-            _logger.LogWarning("{RobotId} timeout with task: {Task}", robot.RobotId, robot.CurrentTaskId ?? "No Task");
+            _logger.LogWarning("{RobotId} timeout with task: {Task}", robot.State.RobotId, robot.State.CurrentTaskId ?? "No Task");
 
             // TODO:
             // Reassign unfinished task
-            if (robot.CurrentTaskId == null) return;
+            if (robot.State.CurrentTaskId == null) return;
 
-            DeliveryTask? task = _taskManager.GetTask(robot.CurrentTaskId);
+            DeliveryTask? task = _taskManager.GetTask(robot.State.CurrentTaskId);
 
             if (task == null || task.Status != Models.TaskStatus.Running) return;
 
             robot.ClearCurrentTask();
             _taskManager.ResetTask(task);
-            _taskExecuteManager.RemoveExecutor(robot.RobotId);
+            _taskExecuteManager.RemoveExecutor(robot.State.RobotId);
 
             Schedule();
         }
@@ -91,12 +91,12 @@ namespace FleetBackend.Services
         {
             foreach (var robot in _robotManager.GetAllRobots())
             {
-                if (robot.Status == RobotStatus.Offline)
+                if (robot.State.Status == RobotStatus.Offline)
                     continue;
 
-                if (DateTime.UtcNow - robot.LastHeartbeat > TimeSpan.FromSeconds(5))
+                if (DateTime.UtcNow - robot.State.LastHeartbeat > TimeSpan.FromSeconds(5))
                 {
-                    robot.Status = RobotStatus.Offline;
+                    robot.Offline();
 
                     OnRobotOffline(robot);
                 }
@@ -115,7 +115,7 @@ namespace FleetBackend.Services
             if (task == null) return;
 
             // 2. Chọn robot phù hợp
-            var robots = _robotManager.GetAllRobots().Where(r => r.Status == RobotStatus.Idle);
+            var robots = _robotManager.GetAllRobots().Where(r => r.State.Status == RobotStatus.Idle);
 
             if (robots.Count() == 0)
             {
@@ -127,12 +127,12 @@ namespace FleetBackend.Services
             float bestCost = float.MaxValue;
             foreach (var robot in robots)
             {
-                float cost = _costCaculator.GetCost(task, robot);
+                float cost = _costCaculator.GetCost(task, robot.State);
 
                 if (cost < bestCost)
                 {
                     bestCost = cost;
-                    bestRobot = robot;
+                    bestRobot = robot.State;
                 }
             }
 

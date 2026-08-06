@@ -14,11 +14,6 @@ namespace FleetBackend.Models
         public string? CurrentTaskId { get; set; }
         public DateTime LastHeartbeat { get; set; }
 
-        [JsonIgnore]
-        public MapPointDto? _currentDock;
-        [JsonIgnore]
-        public MapNodeDto? _currentNode;
-
         public void ClearCurrentTask()
         {
             CurrentTaskId = null;

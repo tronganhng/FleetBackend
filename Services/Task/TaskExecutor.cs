@@ -21,7 +21,7 @@ namespace FleetBackend.Services.Task
         private readonly ICommunicationGateway _gateway;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        private RobotStateDto? _robot;
+        private Robot? _robot;
         private TaskExecutorStep _step;
 
         public string RobotId => _task.AssignedRobotId ?? string.Empty;
@@ -112,8 +112,8 @@ namespace FleetBackend.Services.Task
             SendMoveCommand(dock.Position);
             if (_robot != null) 
             {
-                _robot._currentDock = dock;
-                _robot._currentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
+                _robot.CurrentDock = dock;
+                _robot.CurrentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
             }
         }
 
@@ -129,8 +129,8 @@ namespace FleetBackend.Services.Task
             SendMoveCommand(dock.Position);
             if (_robot != null) 
             {
-                _robot._currentNode = _mapManager.Graph.GetNode(_task.Destination);
-                _robot._currentDock = dock;
+                _robot.CurrentNode = _mapManager.Graph.GetNode(_task.Destination);
+                _robot.CurrentDock = dock;
             }
         }
 
@@ -167,18 +167,18 @@ namespace FleetBackend.Services.Task
             if (_robot == null)
                 return;
 
-            if (_robot._currentDock != null && _robot._currentNode != null)
+            if (_robot.CurrentDock != null && _robot.CurrentNode != null)
             {
-                _mapManager.Dock.ReleaseDock(_robot._currentNode.NodeName, _robot._currentDock.PointName);
-                _robot._currentNode = null;
-                _robot._currentDock = null;
+                _mapManager.Dock.ReleaseDock(_robot.CurrentNode.NodeName, _robot.CurrentDock.PointName);
+                _robot.CurrentNode = null;
+                _robot.CurrentDock = null;
             }
 
             var message = new SocketMessage
             {
                 Type = SocketMessageType.MoveRobot,
                 RequestId = null,
-                RobotId = _robot.RobotId,
+                RobotId = _robot.State.RobotId,
                 Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
             };
 
@@ -194,7 +194,7 @@ namespace FleetBackend.Services.Task
             {
                 Type = SocketMessageType.ChangeRobotStatus,
                 RequestId = null,
-                RobotId = _robot.RobotId,
+                RobotId = _robot.State.RobotId,
                 Payload = JsonSerializer.SerializeToElement(status, _jsonOptions)
             };
 
