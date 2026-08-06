@@ -19,7 +19,7 @@ public class SyncRobotStateHandler : IMessageHandler
 
         if (payloadData != null)
         {
-             _robotManager.UpdateRobotState(payloadData);
+            _robotManager.UpdateRobotState(payloadData);
         }
 
         return Task.FromResult<SocketMessage?>(null);

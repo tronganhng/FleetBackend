@@ -54,9 +54,13 @@ namespace FleetBackend.Services
                 return;
             }
 
-            var previousStatus = _robots[state.RobotId].State.Status;
-            _robots[state.RobotId].State.CopyFrom(state);
-            if (state.Status == RobotStatus.Idle && previousStatus != RobotStatus.Idle) _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId].State));
+            var robot = _robots[state.RobotId];
+            robot.State.CopyFrom(state);
+            if (robot.State.Status == RobotStatus.Offline)
+            {
+                robot.ChangeStatus(RobotStatus.Idle);
+                _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId].State));
+            }
         }
 
         public Robot? GetRobot(string robotId)

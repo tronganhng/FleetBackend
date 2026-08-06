@@ -14,15 +14,8 @@ namespace FleetBackend.Models
         public string? CurrentTaskId { get; set; }
         public DateTime LastHeartbeat { get; set; }
 
-        public void ClearCurrentTask()
-        {
-            CurrentTaskId = null;
-        }
-
         public void CopyFrom(RobotStateDto other)
         {
-            if (other == null) return;
-
             X = other.X;
             Y = other.Y;
             Rotation = other.Rotation;
