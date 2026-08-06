@@ -86,34 +86,52 @@ namespace FleetBackend.Services.Task
 
         private void MoveToPickup()
         {
+            _step = TaskExecutorStep.MoveToPickup;
             var node = _mapManager.Graph.GetNode(_task.PickupLocation);
             if (node == null) return;
-            _step = TaskExecutorStep.MoveToPickup;
             SendMoveCommand(node.Position);
         }
 
         private void MoveToDestination()
         {
+            _step = TaskExecutorStep.MoveToDestination;
             var node = _mapManager.Graph.GetNode(_task.Destination);
             if (node == null) return;
-            _step = TaskExecutorStep.MoveToDestination;
             SendMoveCommand(node.Position);
         }
 
         private void MoveToPickupDock()
         {
-            var dock = _mapManager.Dock.AcquireDock(_task.PickupLocation);
-            if (dock == null) return;
             _step = TaskExecutorStep.MoveToPickupDock;
+            var dock = _mapManager.Dock.AcquireDock(_task.PickupLocation);
+            if (dock == null)
+            {
+                _mapManager.Dock.OnDockReleased += OnDockReleased;
+                return;
+            }
             SendMoveCommand(dock.Position);
+            if (_robot != null) 
+            {
+                _robot._currentDock = dock;
+                _robot._currentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
+            }
         }
 
         private void MoveToDestinationDock()
         {
-            var dock = _mapManager.Dock.AcquireDock(_task.Destination);
-            if (dock == null) return;
             _step = TaskExecutorStep.MoveToDestinationDock;
+            var dock = _mapManager.Dock.AcquireDock(_task.Destination);
+            if (dock == null)
+            {
+                _mapManager.Dock.OnDockReleased += OnDockReleased;
+                return;
+            }
             SendMoveCommand(dock.Position);
+            if (_robot != null) 
+            {
+                _robot._currentNode = _mapManager.Graph.GetNode(_task.Destination);
+                _robot._currentDock = dock;
+            }
         }
 
         private void Complete()
@@ -126,10 +144,31 @@ namespace FleetBackend.Services.Task
             SendChangeStateCommand(RobotStatus.Idle);
         }
 
+        private void OnDockReleased(string nodeName)
+        {
+            if (_step == TaskExecutorStep.MoveToPickupDock && nodeName == _task.PickupLocation)
+            {
+                MoveToPickupDock();
+            }
+            else if (_step == TaskExecutorStep.MoveToDestinationDock && nodeName == _task.Destination)
+            {
+                MoveToDestinationDock();
+            }
+            _mapManager.Dock.OnDockReleased -= OnDockReleased;
+        }
+
         private void SendMoveCommand(float[] position)
         {
             if (_robot == null)
                 return;
+
+            if (_robot._currentDock != null && _robot._currentNode != null)
+            {
+                Logger.Log($"Releasing dock: {_robot._currentNode.NodeName} - {_robot._currentDock.PointName}");
+                _mapManager.Dock.ReleaseDock(_robot._currentNode.NodeName, _robot._currentDock.PointName);
+                _robot._currentNode = null;
+                _robot._currentDock = null;
+            }
 
             var message = new SocketMessage
             {

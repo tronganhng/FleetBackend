@@ -48,7 +48,7 @@ namespace FleetBackend.Services
             }
 
             var previousStatus = _robots[state.RobotId].Status;
-            _robots[state.RobotId] = state;
+            _robots[state.RobotId].CopyFrom(state);
             if (state.Status == RobotStatus.Idle && previousStatus != RobotStatus.Idle) _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId]));
         }
 

@@ -11,6 +11,7 @@ namespace FleetBackend.Services.Map
         bool IsNodeFull(string nodeName);
         MapPointDto? GetDock(string nodeName, string dockName);
         IEnumerable<MapPointDto> GetDocks(string nodeName);
+        event Action<string>? OnDockReleased;
     }
 
     public class DockManager : IDockManager
@@ -18,6 +19,7 @@ namespace FleetBackend.Services.Map
         private readonly Dictionary<string, List<MapPointDto>> _nodeDocks = new();
         private readonly Dictionary<(string Node, string Dock), MapPointDto> _dockLookup = new();
         private readonly ConcurrentDictionary<(string Node, string Dock), bool> _occupied = new();
+        public event Action<string>? OnDockReleased;
 
         public DockManager()
         {
@@ -77,7 +79,7 @@ namespace FleetBackend.Services.Map
         public bool ReleaseDock(string nodeName, string dockName)
         {
             var key = (nodeName, dockName);
-
+            OnDockReleased?.Invoke(nodeName);
             return _occupied.TryUpdate(key, false, true);
         }
 

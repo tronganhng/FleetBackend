@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace FleetBackend.Models
 {
@@ -13,9 +14,28 @@ namespace FleetBackend.Models
         public string? CurrentTaskId { get; set; }
         public DateTime LastHeartbeat { get; set; }
 
+        [JsonIgnore]
+        public MapPointDto? _currentDock;
+        [JsonIgnore]
+        public MapNodeDto? _currentNode;
+
         public void ClearCurrentTask()
         {
             CurrentTaskId = null;
+        }
+
+        public void CopyFrom(RobotStateDto other)
+        {
+            if (other == null) return;
+
+            RobotId = other.RobotId;
+            X = other.X;
+            Y = other.Y;
+            Rotation = other.Rotation;
+            Battery = other.Battery;
+            Status = other.Status;
+            CurrentTaskId = other.CurrentTaskId;
+            LastHeartbeat = other.LastHeartbeat;
         }
     }
 }
