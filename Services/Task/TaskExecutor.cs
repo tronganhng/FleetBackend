@@ -142,6 +142,11 @@ namespace FleetBackend.Services.Task
             OnCompleted = null;
 
             SendChangeStateCommand(RobotStatus.Idle);
+
+            if (_mapManager.Dock.IsNodeFull(_task.Destination))
+            {
+                // move to waiting area
+            }
         }
 
         private void OnDockReleased(string nodeName)
@@ -164,7 +169,6 @@ namespace FleetBackend.Services.Task
 
             if (_robot._currentDock != null && _robot._currentNode != null)
             {
-                Logger.Log($"Releasing dock: {_robot._currentNode.NodeName} - {_robot._currentDock.PointName}");
                 _mapManager.Dock.ReleaseDock(_robot._currentNode.NodeName, _robot._currentDock.PointName);
                 _robot._currentNode = null;
                 _robot._currentDock = null;
