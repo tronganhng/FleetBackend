@@ -14,6 +14,17 @@ public class EventBus : IEventBus
         }
     }
 
+    public void Unsubscribe<T>(Action<T> handler) where T : IEvent
+    {
+        if (!_handlers.TryGetValue(typeof(T), out var handlers))
+            return;
+
+        lock (handlers)
+        {
+            handlers.Remove(handler);
+        }
+    }
+
     public void Publish<T>(T @event) where T : IEvent
     {
         if (!_handlers.TryGetValue(typeof(T), out var handlers))

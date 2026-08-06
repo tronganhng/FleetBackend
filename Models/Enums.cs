@@ -32,5 +32,6 @@ namespace FleetBackend.Models
         CheckNodeFull,
         MoveRobot,
         RobotArrived,
+        ChangeRobotStatus,
     }
 }

@@ -122,6 +122,8 @@ namespace FleetBackend.Services.Task
             _taskManager.UpdateTaskStatus(_task.TaskId, Models.TaskStatus.Completed);
             OnCompleted?.Invoke(this);
             OnCompleted = null;
+
+            SendChangeStateCommand(RobotStatus.Idle);
         }
 
         private void SendMoveCommand(float[] position)
@@ -135,6 +137,22 @@ namespace FleetBackend.Services.Task
                 RequestId = null,
                 RobotId = _robot.RobotId,
                 Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
+            };
+
+            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+        }
+
+        private void SendChangeStateCommand(RobotStatus status)
+        {
+            if (_robot == null)
+                return;
+
+            var message = new SocketMessage
+            {
+                Type = SocketMessageType.ChangeRobotStatus,
+                RequestId = null,
+                RobotId = _robot.RobotId,
+                Payload = JsonSerializer.SerializeToElement(status, _jsonOptions)
             };
 
             _ = _gateway.BroadcastAsync(message, CancellationToken.None);
