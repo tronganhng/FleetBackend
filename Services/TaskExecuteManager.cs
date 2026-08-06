@@ -40,7 +40,7 @@ namespace FleetBackend.Services
         {
             if (task.AssignedRobotId == null) return;
 
-            var executor = new TaskExecutor(task, _robotManager, _mapManager, _taskManager, _gateway, _jsonOptions);
+            var executor = new TaskExecutor(task, _robotManager, _mapManager, _taskManager);
             executor.OnCompleted = RemoveExecutor;
             _executors[task.AssignedRobotId] = executor;
             executor.Execute();

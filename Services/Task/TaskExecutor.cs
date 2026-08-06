@@ -18,8 +18,6 @@ namespace FleetBackend.Services.Task
         private readonly IRobotManager _robotManager;
         private readonly IMapManager _mapManager;
         private readonly ITaskManager _taskManager;
-        private readonly ICommunicationGateway _gateway;
-        private readonly JsonSerializerOptions _jsonOptions;
 
         private Robot? _robot;
         private TaskExecutorStep _step;
@@ -28,14 +26,12 @@ namespace FleetBackend.Services.Task
 
         public Action<TaskExecutor>? OnCompleted { get; set; }
 
-        public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager)
         {
             _task = task;
             _robotManager = robotManager;
             _mapManager = mapManager;
             _taskManager = taskManager;
-            _gateway = gateway;
-            _jsonOptions = jsonOptions;
         }
 
         public void Execute()
@@ -89,7 +85,7 @@ namespace FleetBackend.Services.Task
             _step = TaskExecutorStep.MoveToPickup;
             var node = _mapManager.Graph.GetNode(_task.PickupLocation);
             if (node == null) return;
-            SendMoveCommand(node.Position);
+            _robot?.MoveTo(node.Position);
         }
 
         private void MoveToDestination()
@@ -97,7 +93,7 @@ namespace FleetBackend.Services.Task
             _step = TaskExecutorStep.MoveToDestination;
             var node = _mapManager.Graph.GetNode(_task.Destination);
             if (node == null) return;
-            SendMoveCommand(node.Position);
+            _robot?.MoveTo(node.Position);
         }
 
         private void MoveToPickupDock()
@@ -109,7 +105,7 @@ namespace FleetBackend.Services.Task
                 _mapManager.Dock.OnDockReleased += OnDockReleased;
                 return;
             }
-            SendMoveCommand(dock.Position);
+            _robot?.MoveTo(dock.Position);
             if (_robot != null) 
             {
                 _robot.CurrentDock = dock;
@@ -126,7 +122,7 @@ namespace FleetBackend.Services.Task
                 _mapManager.Dock.OnDockReleased += OnDockReleased;
                 return;
             }
-            SendMoveCommand(dock.Position);
+            _robot?.MoveTo(dock.Position);
             if (_robot != null) 
             {
                 _robot.CurrentNode = _mapManager.Graph.GetNode(_task.Destination);
@@ -141,7 +137,7 @@ namespace FleetBackend.Services.Task
             OnCompleted?.Invoke(this);
             OnCompleted = null;
 
-            SendChangeStateCommand(RobotStatus.Idle);
+            _robot?.ChangeStatus(RobotStatus.Idle);
 
             if (_mapManager.Dock.IsNodeFull(_task.Destination))
             {
@@ -160,45 +156,6 @@ namespace FleetBackend.Services.Task
                 MoveToDestinationDock();
             }
             _mapManager.Dock.OnDockReleased -= OnDockReleased;
-        }
-
-        private void SendMoveCommand(float[] position)
-        {
-            if (_robot == null)
-                return;
-
-            if (_robot.CurrentDock != null && _robot.CurrentNode != null)
-            {
-                _mapManager.Dock.ReleaseDock(_robot.CurrentNode.NodeName, _robot.CurrentDock.PointName);
-                _robot.CurrentNode = null;
-                _robot.CurrentDock = null;
-            }
-
-            var message = new SocketMessage
-            {
-                Type = SocketMessageType.MoveRobot,
-                RequestId = null,
-                RobotId = _robot.State.RobotId,
-                Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
-            };
-
-            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
-        }
-
-        private void SendChangeStateCommand(RobotStatus status)
-        {
-            if (_robot == null)
-                return;
-
-            var message = new SocketMessage
-            {
-                Type = SocketMessageType.ChangeRobotStatus,
-                RequestId = null,
-                RobotId = _robot.State.RobotId,
-                Payload = JsonSerializer.SerializeToElement(status, _jsonOptions)
-            };
-
-            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
         }
     }
 }
