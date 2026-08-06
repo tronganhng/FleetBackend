@@ -23,13 +23,10 @@ namespace FleetBackend.Models
         {
             if (other == null) return;
 
-            RobotId = other.RobotId;
             X = other.X;
             Y = other.Y;
             Rotation = other.Rotation;
             Battery = other.Battery;
-            Status = other.Status;
-            CurrentTaskId = other.CurrentTaskId;
             LastHeartbeat = other.LastHeartbeat;
         }
     }

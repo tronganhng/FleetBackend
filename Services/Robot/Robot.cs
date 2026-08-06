@@ -26,11 +26,6 @@ public class Robot
         State.CurrentTaskId = null;
     }
 
-    public void Offline()
-    {
-        State.Status = RobotStatus.Offline;
-    }
-
     public void MoveTo(float[] position)
     {
         if (CurrentDock != null && CurrentNode != null)
@@ -53,6 +48,8 @@ public class Robot
 
     public void ChangeStatus(RobotStatus status)
     {
+        State.Status = status;
+
         var message = new SocketMessage
         {
             Type = SocketMessageType.ChangeRobotStatus,

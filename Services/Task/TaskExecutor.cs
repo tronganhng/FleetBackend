@@ -86,6 +86,7 @@ namespace FleetBackend.Services.Task
             var node = _mapManager.Graph.GetNode(_task.PickupLocation);
             if (node == null) return;
             _robot?.MoveTo(node.Position);
+            _robot?.ChangeStatus(RobotStatus.DoingTask);
         }
 
         private void MoveToDestination()
