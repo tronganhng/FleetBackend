@@ -9,6 +9,7 @@ namespace FleetBackend.Models
     public class MapNodeDto
     {
         public string NodeName { get; set; } = string.Empty;
+        public NodeType NodeType { get; set; } = NodeType.Room;
         public float[] Position { get; set; } = Array.Empty<float>();
         public List<MapPointDto> MapPoints { get; set; } = new();
     }

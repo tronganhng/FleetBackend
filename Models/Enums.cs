@@ -19,6 +19,13 @@ namespace FleetBackend.Models
         Cancelled
     }
 
+    public enum NodeType
+    {
+        Room,
+        SharedResource,
+        WaitingArea,
+    }
+
     public enum SocketMessageType
     {
         ServerResponse,

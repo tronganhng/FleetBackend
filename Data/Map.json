@@ -2,6 +2,7 @@
   "Nodes": [
     {
       "NodeName": "waiting_zone",
+      "NodeType": 2,
       "Position": [
         14.12515,
         -1.712679
@@ -31,7 +32,17 @@
       ]
     },
     {
+      "NodeName": "charging_station",
+      "NodeType": 1,
+      "Position": [
+        -13.84,
+        -21.23
+      ],
+      "MapPoints": []
+    },
+    {
       "NodeName": "room1",
+      "NodeType": 0,
       "Position": [
         13.29,
         20.33
@@ -55,6 +66,7 @@
     },
     {
       "NodeName": "room2",
+      "NodeType": 0,
       "Position": [
         13.01,
         9.38
@@ -78,6 +90,7 @@
     },
     {
       "NodeName": "room3",
+      "NodeType": 0,
       "Position": [
         14.84,
         -11.68
@@ -101,6 +114,7 @@
     },
     {
       "NodeName": "room4",
+      "NodeType": 0,
       "Position": [
         14.11,
         -20.83
@@ -124,6 +138,7 @@
     },
     {
       "NodeName": "room5",
+      "NodeType": 0,
       "Position": [
         -13.78,
         20.34
@@ -147,6 +162,7 @@
     },
     {
       "NodeName": "room6",
+      "NodeType": 0,
       "Position": [
         -13.68,
         9.9
@@ -170,6 +186,7 @@
     },
     {
       "NodeName": "room7",
+      "NodeType": 0,
       "Position": [
         -13.81,
         -11.54
@@ -192,15 +209,8 @@
       ]
     },
     {
-      "NodeName": "charging_station",
-      "Position": [
-        -13.84,
-        -21.23
-      ],
-      "MapPoints": []
-    },
-    {
       "NodeName": "junction1",
+      "NodeType": 1,
       "Position": [
         7.53,
         15.29
@@ -209,6 +219,7 @@
     },
     {
       "NodeName": "junction2",
+      "NodeType": 1,
       "Position": [
         -7.93,
         15.29
@@ -217,6 +228,7 @@
     },
     {
       "NodeName": "junction3",
+      "NodeType": 1,
       "Position": [
         -7.93,
         -12.8
@@ -225,6 +237,7 @@
     },
     {
       "NodeName": "junction4",
+      "NodeType": 1,
       "Position": [
         7.9,
         -12.8

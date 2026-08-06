@@ -19,16 +19,12 @@ namespace FleetBackend.Services
         private readonly IRobotManager _robotManager;
         private readonly IMapManager _mapManager;
         private readonly ITaskManager _taskManager;
-        private readonly ICommunicationGateway _gateway;
-        private readonly JsonSerializerOptions _jsonOptions;
 
-        public TaskExecuteManager(IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public TaskExecuteManager(IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager)
         {
             _robotManager = robotManager;
             _mapManager = mapManager;
             _taskManager = taskManager;
-            _gateway = gateway;
-            _jsonOptions = jsonOptions;
         }
 
         public void Clear()
