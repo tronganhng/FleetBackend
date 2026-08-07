@@ -59,5 +59,30 @@ public class Robot
         };
 
         _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+
+        if (status == RobotStatus.Idle)
+        {
+            TryGoToWaitingDock();
+        }
+    }
+
+    private void TryGoToWaitingDock()
+    {
+        if (CurrentNode != null && _mapManager.Dock.IsNodeFull(CurrentNode.NodeName))
+        {
+            var waitingNodes = _mapManager.Graph.GetNodesBy(NodeType.WaitingArea);
+            foreach (var node in waitingNodes)
+            {
+                if (!_mapManager.Dock.IsNodeFull(node.NodeName))
+                {
+                    var dock = _mapManager.Dock.AcquireDock(node.NodeName);
+                    if (dock == null) return;
+                    MoveTo(dock.Position);
+                    CurrentNode = node;
+                    CurrentDock = dock;
+                    break;
+                }
+            }
+        }
     }
 }

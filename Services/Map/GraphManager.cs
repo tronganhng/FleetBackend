@@ -6,6 +6,7 @@ namespace FleetBackend.Services.Map
     {
         bool HasNode(string nodeName);
         MapNodeDto GetNode(string nodeName);
+        IEnumerable<MapNodeDto> GetNodesBy(NodeType nodeType);
         IEnumerable<MapLaneDto> GetConnectedLanes(string nodeName);
         MapNodeDto? GetRobotNode(RobotStateDto robot);
     }
@@ -35,6 +36,11 @@ namespace FleetBackend.Services.Map
         public MapNodeDto GetNode(string nodeName)
         {
             return _nodes.First(p => p.NodeName == nodeName);
+        }
+
+        public IEnumerable<MapNodeDto> GetNodesBy(NodeType nodeType)
+        {
+            return _nodes.Where(n => n.NodeType == nodeType);
         }
 
         public IEnumerable<MapLaneDto> GetConnectedLanes(string nodeName)

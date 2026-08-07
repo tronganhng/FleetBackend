@@ -106,9 +106,9 @@ namespace FleetBackend.Services.Task
                 _mapManager.Dock.OnDockReleased += OnDockReleased;
                 return;
             }
-            _robot?.MoveTo(dock.Position);
-            if (_robot != null) 
+            if (_robot != null)
             {
+                _robot.MoveTo(dock.Position);
                 _robot.CurrentDock = dock;
                 _robot.CurrentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
             }
@@ -123,9 +123,9 @@ namespace FleetBackend.Services.Task
                 _mapManager.Dock.OnDockReleased += OnDockReleased;
                 return;
             }
-            _robot?.MoveTo(dock.Position);
-            if (_robot != null) 
+            if (_robot != null)
             {
+                _robot.MoveTo(dock.Position);
                 _robot.CurrentNode = _mapManager.Graph.GetNode(_task.Destination);
                 _robot.CurrentDock = dock;
             }
@@ -139,11 +139,6 @@ namespace FleetBackend.Services.Task
             OnCompleted = null;
 
             _robot?.ChangeStatus(RobotStatus.Idle);
-
-            if (_mapManager.Dock.IsNodeFull(_task.Destination))
-            {
-                // move to waiting area
-            }
         }
 
         private void OnDockReleased(string nodeName)
