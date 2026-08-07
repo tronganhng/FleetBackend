@@ -37,7 +37,6 @@ namespace FleetBackend.Models
         CancelTask,
         ResourceAccess,
         ResourceRelease,
-        CheckNodeFull,
         MoveRobot,
         RobotArrived,
         ChangeRobotStatus,

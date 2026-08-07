@@ -10,7 +10,6 @@ public static class MessageHandlerExtensions
         services.AddSingleton<IMessageHandler, SyncRobotStateHandler>();
         services.AddSingleton<IMessageHandler, ResourceAccessHandler>();
         services.AddSingleton<IMessageHandler, ResourceReleaseHandler>();
-        services.AddSingleton<IMessageHandler, CheckNodeFullHandler>();
         services.AddSingleton<IMessageHandler, RobotArrivedHandler>();
         return services;
     }
