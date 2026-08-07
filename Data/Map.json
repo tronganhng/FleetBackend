@@ -33,12 +33,34 @@
     },
     {
       "NodeName": "charging_station",
-      "NodeType": 1,
+      "NodeType": 3,
       "Position": [
         -13.84,
         -21.23
       ],
-      "MapPoints": []
+      "MapPoints": [
+        {
+          "PointName": "point1",
+          "Position": [
+            -16.03,
+            -22.23
+          ]
+        },
+        {
+          "PointName": "point2",
+          "Position": [
+            -19.17,
+            -22.24
+          ]
+        },
+        {
+          "PointName": "point3",
+          "Position": [
+            -22.33,
+            -22.23
+          ]
+        }
+      ]
     },
     {
       "NodeName": "room1",

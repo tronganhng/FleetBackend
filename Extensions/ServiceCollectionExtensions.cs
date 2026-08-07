@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITrafficManager, TrafficManager>();
         services.AddSingleton<IScheduler, Scheduler>();
         services.AddSingleton<ITaskExecuteManager, TaskExecuteManager>();
+        services.AddSingleton<IRobotBatteryWatcher, RobotBatteryWatcher>();
         return services;
     }
 }
