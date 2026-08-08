@@ -42,7 +42,7 @@ namespace FleetBackend.Services
 
             state.RobotId = robotId;
             state.LastHeartbeat = state.LastHeartbeat == default ? DateTime.UtcNow : state.LastHeartbeat;
-            _robots[robotId] = new Robot(state, _mapManager, _gateway, _jsonOptions);
+            _robots[robotId] = new Robot(state, _mapManager, _eventBus, _gateway, _jsonOptions);
 
             return robotId;
         }
@@ -59,7 +59,6 @@ namespace FleetBackend.Services
             if (robot.State.Status == RobotStatus.Offline)
             {
                 robot.ChangeStatus(RobotStatus.Idle);
-                _eventBus.Publish(new RobotBackToIdleEvent(_robots[state.RobotId].State));
             }
         }
 

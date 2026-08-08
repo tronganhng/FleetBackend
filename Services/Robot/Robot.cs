@@ -5,6 +5,7 @@ using System.Text.Json;
 public class Robot
 {
     private readonly IMapManager _mapManager;
+    private readonly IEventBus _eventBus;
     private readonly ICommunicationGateway _gateway;
     private readonly JsonSerializerOptions _jsonOptions;
 
@@ -13,11 +14,12 @@ public class Robot
     public MapPointDto? CurrentDock { get; set; }
     public MapNodeDto? CurrentNode { get; set; }
 
-    public Robot(RobotStateDto state, IMapManager mapManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+    public Robot(RobotStateDto state, IMapManager mapManager, IEventBus eventBus, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
     {
         State = state;
         _mapManager = mapManager;
         _gateway = gateway;
+        _eventBus = eventBus;
         _jsonOptions = jsonOptions;
     }
 
@@ -62,6 +64,7 @@ public class Robot
 
         if (status == RobotStatus.Idle)
         {
+            _eventBus.Publish(new RobotBackToIdleEvent(State));
             TryGoToWaitingDock();
         }
     }

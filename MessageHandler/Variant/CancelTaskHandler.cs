@@ -25,12 +25,17 @@ public class CancelTaskHandler : IMessageHandler
             var task = _taskManager.GetTask(payloadData.TaskId);
             if (task != null)
             {
-                _taskManager.CancelTask(task);
                 if (task.AssignedRobotId != null) 
                 {
-                    _robotManager.GetRobot(task.AssignedRobotId)?.ClearCurrentTask();
+                    var robot  = _robotManager.GetRobot(task.AssignedRobotId);
+                    if (robot != null) 
+                    {
+                        robot.ClearCurrentTask();
+                        robot.ChangeStatus(RobotStatus.Idle);
+                    }
                     _taskExecuteManager.RemoveExecutor(task.AssignedRobotId);
                 }
+                _taskManager.CancelTask(task);
                 
                 var response = new SocketMessage
                 {
