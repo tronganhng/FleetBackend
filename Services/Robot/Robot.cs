@@ -76,34 +76,28 @@ public class Robot
             var waitingNodes = _mapManager.Graph.GetNodesBy(NodeType.WaitingArea);
             foreach (var node in waitingNodes)
             {
-                if (!_mapManager.Dock.IsNodeFull(node.NodeName))
-                {
-                    var dock = _mapManager.Dock.AcquireDock(node.NodeName);
-                    if (dock == null) return;
-                    MoveTo(dock.Position);
-                    CurrentNode = node;
-                    CurrentDock = dock;
-                    break;
-                }
+                var dock = _mapManager.Dock.AcquireDock(node.NodeName);
+                if (dock == null) continue;
+                MoveTo(dock.Position);
+                CurrentNode = node;
+                CurrentDock = dock;
+                break;
             }
         }
     }
 
-    public void TryGoToChargingArea()
+    public void TryGoToChargingDock()
     {
         var chargingNodes = _mapManager.Graph.GetNodesBy(NodeType.ChargingArea);
         foreach (var node in chargingNodes)
         {
-            if (!_mapManager.Dock.IsNodeFull(node.NodeName))
-            {
-                var dock = _mapManager.Dock.AcquireDock(node.NodeName);
-                if (dock == null) return;
-                MoveTo(dock.Position);
-                CurrentNode = node;
-                CurrentDock = dock;
-                ChangeStatus(RobotStatus.Charging);
-                break;
-            }
+            var dock = _mapManager.Dock.AcquireDock(node.NodeName);
+            if (dock == null) continue;
+            MoveTo(dock.Position);
+            CurrentNode = node;
+            CurrentDock = dock;
+            ChangeStatus(RobotStatus.Charging);
+            break;
         }
     }
 }
