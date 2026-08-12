@@ -42,6 +42,7 @@ namespace FleetBackend.Models
     public enum SocketMessageType
     {
         RegisterClient,
+        SetSystemMode,
         ServerResponse,
         RegisterRobot,
         RobotState,

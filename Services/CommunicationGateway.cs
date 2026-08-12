@@ -13,6 +13,7 @@ public class ConnectedSocket
 
 public interface ICommunicationGateway
 {
+    SystemMode SystemMode { get; set; }
     ConcurrentDictionary<Guid, ConnectedSocket> Sockets { get; }
     Task BroadcastAsync(SocketMessage message, CancellationToken cancellationToken = default);
     IEnumerable<ConnectedSocket> GetSocketsByType(ClientType clientType);
@@ -23,10 +24,13 @@ public class CommunicationGateway : ICommunicationGateway
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ConcurrentDictionary<Guid, ConnectedSocket> _sockets = new();
 
+    public SystemMode SystemMode { get; set; }
     public ConcurrentDictionary<Guid, ConnectedSocket> Sockets => _sockets;
 
     public CommunicationGateway(JsonSerializerOptions jsonOptions)
     {
+        SystemMode = SystemMode.Simulation;
+        Logger.Log("System mode: " + SystemMode);
         _jsonOptions = jsonOptions;
     }
 
