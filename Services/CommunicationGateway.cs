@@ -2,23 +2,37 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
+using FleetBackend.Models;
+
+public class ConnectedSocket
+{
+    public Guid ConnectionId { get; init; }
+    public WebSocket WebSocket { get; init; } = default!;
+    public ClientType ClientType { get; set; }
+}
 
 public interface ICommunicationGateway
 {
-    ConcurrentDictionary<Guid, WebSocket> Sockets { get; }
+    ConcurrentDictionary<Guid, ConnectedSocket> Sockets { get; }
     Task BroadcastAsync(SocketMessage message, CancellationToken cancellationToken = default);
+    IEnumerable<ConnectedSocket> GetSocketsByType(ClientType clientType);
 }
 
 public class CommunicationGateway : ICommunicationGateway
 {
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly ConcurrentDictionary<Guid, WebSocket> _sockets = new();
+    private readonly ConcurrentDictionary<Guid, ConnectedSocket> _sockets = new();
 
-    public ConcurrentDictionary<Guid, WebSocket> Sockets => _sockets;
+    public ConcurrentDictionary<Guid, ConnectedSocket> Sockets => _sockets;
 
     public CommunicationGateway(JsonSerializerOptions jsonOptions)
     {
         _jsonOptions = jsonOptions;
+    }
+
+    public IEnumerable<ConnectedSocket> GetSocketsByType(ClientType clientType)
+    {
+        return _sockets.Values.Where(socket => socket.ClientType == clientType);
     }
 
     public async Task BroadcastAsync(SocketMessage message, CancellationToken cancellationToken = default)
@@ -31,7 +45,8 @@ public class CommunicationGateway : ICommunicationGateway
         foreach (var kv in _sockets)
         {
             var id = kv.Key;
-            var ws = kv.Value;
+            var client = kv.Value;
+            var ws = client.WebSocket;
 
             if (ws.State != WebSocketState.Open)
             {

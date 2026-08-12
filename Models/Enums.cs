@@ -1,5 +1,17 @@
 namespace FleetBackend.Models
 {
+    public enum SystemMode
+    {
+        Operation,
+        Simulation
+    }
+
+    public enum ClientType
+    {
+        Unity,
+        Robot
+    }
+
     public enum RobotStatus
     {
         Idle,
@@ -29,6 +41,7 @@ namespace FleetBackend.Models
 
     public enum SocketMessageType
     {
+        RegisterClient,
         ServerResponse,
         RegisterRobot,
         RobotState,

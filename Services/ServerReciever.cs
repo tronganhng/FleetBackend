@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using FleetBackend.Models;
 
 public interface IServerReciever
 {
@@ -23,7 +24,14 @@ public class ServerReciever : IServerReciever
     public async Task HandleClientAsync(WebSocket socket, CancellationToken cancellationToken)
     {
         var connectionId = Guid.NewGuid();
-        _gateway.Sockets.TryAdd(connectionId, socket);
+        var client = new ConnectedSocket
+        {
+            ConnectionId = connectionId,
+            WebSocket = socket,
+            ClientType = ClientType.Unity
+        };
+
+        _gateway.Sockets.TryAdd(connectionId, client);
 
         var buffer = new byte[4096];
 
@@ -58,6 +66,12 @@ public class ServerReciever : IServerReciever
 
                     if (socketMessage is null) continue;
 
+                    if (socketMessage.Type == SocketMessageType.RegisterClient)
+                    {
+                        ClientRegisterHandle(socketMessage, connectionId);
+                        continue;
+                    }
+
                     var response = await _messageRouter.RouteAsync(socketMessage);
 
                     if (response != null)
@@ -82,5 +96,16 @@ public class ServerReciever : IServerReciever
         var json = JsonSerializer.Serialize(message, _jsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, token);
+    }
+
+    private void ClientRegisterHandle(SocketMessage socketMessage, Guid connectionId)
+    {
+        var clientType = socketMessage.Payload.Deserialize<ClientType>(_jsonOptions);
+
+        if (_gateway.Sockets.TryGetValue(connectionId, out var registeredClient))
+        {
+            registeredClient.ClientType = clientType;
+            Logger.Log($"Client {connectionId} registered as {registeredClient.ClientType}");
+        }
     }
 }

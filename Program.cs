@@ -35,7 +35,6 @@ app.Map("/ws", async context =>
     var socket = await context.WebSockets.AcceptWebSocketAsync();
     var reciever = context.RequestServices.GetRequiredService<IServerReciever>();
 
-    Logger.Log("Unity Connected");
     app.Services.GetRequiredService<ISessionManager>().Reset();
 
     await reciever.HandleClientAsync(socket, context.RequestAborted);

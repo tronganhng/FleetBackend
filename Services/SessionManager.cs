@@ -24,6 +24,7 @@ namespace FleetBackend.Services
 
         public void Reset()
         {
+            Logger.Log("Clear Session");
             _robotManager.Clear();
             _taskManager.Clear();
             _trafficManager.Clear();
