@@ -8,7 +8,6 @@ public class ConnectedSocket
 {
     public Guid ConnectionId { get; init; }
     public WebSocket WebSocket { get; init; } = default!;
-    public ClientType ClientType { get; set; }
 }
 
 public interface ICommunicationGateway
@@ -106,6 +105,32 @@ public class CommunicationGateway : ICommunicationGateway
 
     private async Task SendRobot(SocketMessage message, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(message.RobotId))
+            return;
 
+        if (!robotSockets.TryGetValue(message.RobotId, out var client))
+        {
+            return;
+        }
+
+        var ws = client.WebSocket;
+
+        if (ws.State != WebSocketState.Open)
+        {
+            robotSockets.TryRemove(message.RobotId, out _);
+            return;
+        }
+
+        try
+        {
+            var json = JsonSerializer.Serialize(message, _jsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(json);
+
+            await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+        }
+        catch
+        {
+            robotSockets.TryRemove(message.RobotId, out _);
+        }
     }
 }

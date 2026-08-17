@@ -98,7 +98,6 @@ public class ServerReciever : IServerReciever
         {
             ConnectionId = connectionId,
             WebSocket = socket,
-            ClientType = clientType
         };
 
         switch (clientType)

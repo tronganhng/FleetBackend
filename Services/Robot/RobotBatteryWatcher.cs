@@ -25,7 +25,6 @@ namespace FleetBackend.Services
             {
                 if (robot.State.Battery <= 50)
                 {
-                    Logger.Log("ASDASD");
                     robot.TryGoToChargingDock();
                 }   
             }
