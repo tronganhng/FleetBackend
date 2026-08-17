@@ -138,7 +138,7 @@ namespace FleetBackend.Services
                 RequestId = null,
                 Payload = JsonSerializer.SerializeToElement(task, _jsonOptions)
             };
-            _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+            _ = _gateway.SendDashboardAsync(message, CancellationToken.None);
         }
     }
 }

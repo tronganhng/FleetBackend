@@ -36,15 +36,6 @@ public class CancelTaskHandler : IMessageHandler
                     _taskExecuteManager.RemoveExecutor(task.AssignedRobotId);
                 }
                 _taskManager.CancelTask(task);
-                
-                var response = new SocketMessage
-                {
-                    Type = SocketMessageType.ServerResponse,
-                    RequestId = socketMessage.RequestId,
-                    Payload = JsonSerializer.SerializeToElement(task, jsonOptions),
-                };
-
-                return Task.FromResult<SocketMessage?>(response);
             }
 
         }

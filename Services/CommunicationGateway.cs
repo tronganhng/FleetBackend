@@ -14,39 +14,69 @@ public class ConnectedSocket
 public interface ICommunicationGateway
 {
     SystemMode SystemMode { get; set; }
-    ConcurrentDictionary<Guid, ConnectedSocket> Sockets { get; }
-    Task BroadcastAsync(SocketMessage message, CancellationToken cancellationToken = default);
-    IEnumerable<ConnectedSocket> GetSocketsByType(ClientType clientType);
+    ConcurrentDictionary<Guid, ConnectedSocket> UnitySockets { get; }
+    ConcurrentDictionary<string, ConnectedSocket> RobotSockets { get; }
+
+    Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default);
+    Task SendDashboardAsync(SocketMessage message, CancellationToken cancellationToken = default);
+    void RemoveSocket(Guid connectionId);
 }
 
 public class CommunicationGateway : ICommunicationGateway
 {
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly ConcurrentDictionary<Guid, ConnectedSocket> _sockets = new();
+    private readonly ConcurrentDictionary<Guid, ConnectedSocket> unitySockets = new();
+    private readonly ConcurrentDictionary<string, ConnectedSocket> robotSockets = new();
 
     public SystemMode SystemMode { get; set; }
-    public ConcurrentDictionary<Guid, ConnectedSocket> Sockets => _sockets;
+    public ConcurrentDictionary<Guid, ConnectedSocket> UnitySockets => unitySockets;
+    public ConcurrentDictionary<string, ConnectedSocket> RobotSockets => robotSockets;
 
     public CommunicationGateway(JsonSerializerOptions jsonOptions)
     {
         SystemMode = SystemMode.Simulation;
-        Logger.Log("System mode: " + SystemMode);
         _jsonOptions = jsonOptions;
     }
 
-    public IEnumerable<ConnectedSocket> GetSocketsByType(ClientType clientType)
+    public void RemoveSocket(Guid connectionId)
     {
-        return _sockets.Values.Where(socket => socket.ClientType == clientType);
+        if (unitySockets.TryRemove(connectionId, out _))
+            return;
+
+        foreach (var pair in robotSockets)
+        {
+            if (pair.Value.ConnectionId == connectionId)
+            {
+                robotSockets.TryRemove(pair.Key, out _);
+                return;
+            }
+        }
     }
 
-    public async Task BroadcastAsync(SocketMessage message, CancellationToken cancellationToken = default)
+    public async Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default)
+    {
+        if (SystemMode == SystemMode.Operation)
+        {
+            await SendRobot(message, cancellationToken);
+        }
+        else if (SystemMode == SystemMode.Simulation)
+        {
+            await SendUnity(message, cancellationToken);
+        }
+    }
+
+    public async Task SendDashboardAsync(SocketMessage message, CancellationToken cancellationToken = default)
+    {
+        await SendUnity(message, cancellationToken);
+    }
+
+    private async Task SendUnity(SocketMessage message, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(message, _jsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
 
         var toRemove = new List<Guid>();
-
-        foreach (var kv in _sockets)
+        foreach (var kv in unitySockets)
         {
             var id = kv.Key;
             var client = kv.Value;
@@ -70,7 +100,12 @@ public class CommunicationGateway : ICommunicationGateway
 
         foreach (var id in toRemove)
         {
-            _sockets.TryRemove(id, out _);
+            unitySockets.TryRemove(id, out _);
         }
+    }
+
+    private async Task SendRobot(SocketMessage message, CancellationToken cancellationToken)
+    {
+
     }
 }

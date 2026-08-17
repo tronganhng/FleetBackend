@@ -23,17 +23,9 @@ public class ServerReciever : IServerReciever
 
     public async Task HandleClientAsync(WebSocket socket, CancellationToken cancellationToken)
     {
-        var connectionId = Guid.NewGuid();
-        var client = new ConnectedSocket
-        {
-            ConnectionId = connectionId,
-            WebSocket = socket,
-            ClientType = ClientType.Unity
-        };
-
-        _gateway.Sockets.TryAdd(connectionId, client);
-
         var buffer = new byte[4096];
+
+        var connectionId = Guid.NewGuid();
 
         try
         {
@@ -68,7 +60,7 @@ public class ServerReciever : IServerReciever
 
                     if (socketMessage.Type == SocketMessageType.RegisterClient)
                     {
-                        ClientRegisterHandle(socketMessage, connectionId);
+                        ClientRegisterHandle(socketMessage, socket, connectionId);
                         continue;
                     }
 
@@ -87,7 +79,7 @@ public class ServerReciever : IServerReciever
         }
         finally
         {
-            _gateway.Sockets.TryRemove(connectionId, out _);
+            _gateway.RemoveSocket(connectionId);
         }
     }
 
@@ -98,14 +90,26 @@ public class ServerReciever : IServerReciever
         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, token);
     }
 
-    private void ClientRegisterHandle(SocketMessage socketMessage, Guid connectionId)
+    private void ClientRegisterHandle(SocketMessage socketMessage, WebSocket socket, Guid connectionId)
     {
         var clientType = socketMessage.Payload.Deserialize<ClientType>(_jsonOptions);
 
-        if (_gateway.Sockets.TryGetValue(connectionId, out var registeredClient))
+        var client = new ConnectedSocket
         {
-            registeredClient.ClientType = clientType;
-            Logger.Log($"Client {connectionId} registered as {registeredClient.ClientType}");
+            ConnectionId = connectionId,
+            WebSocket = socket,
+            ClientType = clientType
+        };
+
+        switch (clientType)
+        {
+            case ClientType.Unity:
+                _gateway.UnitySockets.TryAdd(connectionId, client);
+                break;
+            case ClientType.Robot:
+                if (socketMessage.RobotId != null)
+                    _gateway.RobotSockets.TryAdd(socketMessage.RobotId, client);
+                break;
         }
     }
 }

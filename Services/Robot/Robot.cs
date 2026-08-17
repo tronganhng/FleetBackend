@@ -45,7 +45,7 @@ public class Robot
             Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
         };
 
-        _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
     }
 
     public void ChangeStatus(RobotStatus status)
@@ -60,7 +60,7 @@ public class Robot
             Payload = JsonSerializer.SerializeToElement(status, _jsonOptions)
         };
 
-        _ = _gateway.BroadcastAsync(message, CancellationToken.None);
+        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
 
         if (status == RobotStatus.Idle)
         {

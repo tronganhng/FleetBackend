@@ -25,7 +25,6 @@ namespace FleetBackend.Models
 
         public void Cancel()
         {
-            AssignedRobotId = null;
             Status = TaskStatus.Cancelled;
         }
     }
