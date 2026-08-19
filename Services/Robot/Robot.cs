@@ -26,6 +26,15 @@ public class Robot
     public void ClearCurrentTask()
     {
         State.CurrentTaskId = null;
+
+        var message = new SocketMessage
+        {
+            Type = SocketMessageType.StopRobot,
+            RequestId = null,
+            RobotId = State.RobotId,
+            Payload = JsonSerializer.SerializeToElement(true, _jsonOptions)
+        };
+        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
     }
 
     public void MoveTo(float[] position)

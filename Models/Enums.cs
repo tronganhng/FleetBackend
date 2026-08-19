@@ -52,6 +52,7 @@ namespace FleetBackend.Models
         ResourceAccess,
         ResourceRelease,
         MoveRobot,
+        StopRobot,
         RobotArrived,
         ChangeRobotStatus,
     }
