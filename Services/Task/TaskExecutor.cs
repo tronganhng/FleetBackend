@@ -89,14 +89,6 @@ namespace FleetBackend.Services.Task
             _robot?.ChangeStatus(RobotStatus.DoingTask);
         }
 
-        private void MoveToDestination()
-        {
-            _step = TaskExecutorStep.MoveToDestination;
-            var node = _mapManager.Graph.GetNode(_task.Destination);
-            if (node == null) return;
-            _robot?.MoveTo(node.Position);
-        }
-
         private void MoveToPickupDock()
         {
             _step = TaskExecutorStep.MoveToPickupDock;
@@ -112,6 +104,14 @@ namespace FleetBackend.Services.Task
                 _robot.CurrentDock = dock;
                 _robot.CurrentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
             }
+        }
+
+        private void MoveToDestination()
+        {
+            _step = TaskExecutorStep.MoveToDestination;
+            var node = _mapManager.Graph.GetNode(_task.Destination);
+            if (node == null) return;
+            _robot?.MoveTo(node.Position);
         }
 
         private void MoveToDestinationDock()
