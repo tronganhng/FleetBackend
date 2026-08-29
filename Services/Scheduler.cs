@@ -94,7 +94,7 @@ namespace FleetBackend.Services
                 if (robot.State.Status == RobotStatus.Offline)
                     continue;
 
-                if (DateTime.UtcNow - robot.State.LastHeartbeat > TimeSpan.FromSeconds(5))
+                if (DateTime.Now - robot.State.LastHeartbeat > TimeSpan.FromSeconds(5))
                 {
                     robot.ChangeStatus(RobotStatus.Offline);
 
