@@ -26,7 +26,11 @@ public class Robot
     public void ClearCurrentTask()
     {
         State.CurrentTaskId = null;
+        Stop();
+    }
 
+    private void Stop()
+    {
         var message = new SocketMessage
         {
             Type = SocketMessageType.StopRobot,
