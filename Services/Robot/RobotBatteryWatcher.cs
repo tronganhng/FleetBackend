@@ -20,13 +20,23 @@ namespace FleetBackend.Services
 
         public void Tick()
         {
-            var robots = _robotManager.GetAllRobots().Where(r => r.State.Status == RobotStatus.Idle);
-            foreach (var robot in robots)
+            var idleRobots = _robotManager.GetAllRobots().Where(r => r.State.Status == RobotStatus.Idle);
+            foreach (var robot in idleRobots)
             {
                 if (robot.State.Battery <= 50)
                 {
                     robot.TryGoToChargingDock();
-                }   
+                    robot.ChangeStatus(RobotStatus.Charging);
+                }
+            }
+
+            var chargingRobots = _robotManager.GetAllRobots().Where(r => r.State.Status == RobotStatus.Charging);
+            foreach (var robot in chargingRobots)
+            {
+                if (robot.State.Battery >= 95)
+                {
+                    robot.ChangeStatus(RobotStatus.Idle);
+                }
             }
         }
     }
