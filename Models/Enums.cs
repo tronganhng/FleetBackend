@@ -36,7 +36,6 @@ namespace FleetBackend.Models
         Room,
         SharedResource,
         WaitingArea,
-        ChargingArea,
     }
 
     public enum SocketMessageType
@@ -55,5 +54,6 @@ namespace FleetBackend.Models
         StopRobot,
         RobotArrived,
         ChangeRobotStatus,
+        ChargeRobot,
     }
 }

@@ -13,52 +13,24 @@
           "Position": [
             20.81515,
             1.527321
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             20.94515,
             -1.712679
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point3",
           "Position": [
             21.05515,
             -5.182679
-          ]
-        }
-      ]
-    },
-    {
-      "NodeName": "charging_station",
-      "NodeType": 3,
-      "Position": [
-        -13.84,
-        -21.23
-      ],
-      "MapPoints": [
-        {
-          "PointName": "point1",
-          "Position": [
-            -16.03,
-            -22.23
-          ]
-        },
-        {
-          "PointName": "point2",
-          "Position": [
-            -19.17,
-            -22.24
-          ]
-        },
-        {
-          "PointName": "point3",
-          "Position": [
-            -22.33,
-            -22.23
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -75,14 +47,16 @@
           "Position": [
             18.86,
             22.08
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             19.0299988,
             18.44
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -99,14 +73,16 @@
           "Position": [
             18.99,
             11.68
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             19.03,
             7.35000038
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -123,14 +99,16 @@
           "Position": [
             19.55,
             -10.4500008
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             19.85,
             -13.18
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -147,14 +125,16 @@
           "Position": [
             19.64,
             -19.29
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             19.92,
             -22.1199989
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -171,14 +151,16 @@
           "Position": [
             -19.59,
             22.09
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             -19.47,
             18.42
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -195,14 +177,16 @@
           "Position": [
             -19.39,
             11.83
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             -19.14,
             8.54
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -219,14 +203,16 @@
           "Position": [
             -19.25,
             -10.18
-          ]
+          ],
+          "Yaw": 0.0
         },
         {
           "PointName": "point2",
           "Position": [
             -19.12,
             -13.3
-          ]
+          ],
+          "Yaw": 0.0
         }
       ]
     },
@@ -268,11 +254,6 @@
     }
   ],
   "Lanes": [
-    {
-      "StartNode": "junction3",
-      "EndNode": "charging_station",
-      "Distance": 10.29529
-    },
     {
       "StartNode": "junction3",
       "EndNode": "room7",

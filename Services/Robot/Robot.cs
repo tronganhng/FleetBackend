@@ -101,16 +101,14 @@ public class Robot
 
     public void TryGoToChargingDock()
     {
-        var chargingNodes = _mapManager.Graph.GetNodesBy(NodeType.ChargingArea);
-        foreach (var node in chargingNodes)
+        var message = new SocketMessage
         {
-            var dock = _mapManager.Dock.AcquireDock(node.NodeName);
-            if (dock == null) continue;
-            MoveTo(dock.Position);
-            CurrentNode = node;
-            CurrentDock = dock;
-            ChangeStatus(RobotStatus.Charging);
-            break;
-        }
+            Type = SocketMessageType.ChargeRobot,
+            RequestId = null,
+            RobotId = State.RobotId,
+            Payload = JsonSerializer.SerializeToElement(true, _jsonOptions)
+        };
+
+        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
     }
 }
