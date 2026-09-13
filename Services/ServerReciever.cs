@@ -107,7 +107,7 @@ public class ServerReciever : IServerReciever
                 break;
             case ClientType.Robot:
                 if (socketMessage.RobotId != null)
-                    _gateway.RobotSockets.TryAdd(socketMessage.RobotId, client);
+                    _gateway.RobotSockets[socketMessage.RobotId] = client;
                 break;
         }
     }
