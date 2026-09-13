@@ -33,9 +33,9 @@ app.Map("/ws", async context =>
     }
 
     var socket = await context.WebSockets.AcceptWebSocketAsync();
-    var reciever = context.RequestServices.GetRequiredService<IServerReciever>();
+    var receiver = context.RequestServices.GetRequiredService<IServerReceiver>();
 
-    await reciever.HandleClientAsync(socket, context.RequestAborted);
+    await receiver.HandleClientAsync(socket, context.RequestAborted);
 });
 
 app.Run();

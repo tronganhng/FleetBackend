@@ -4,32 +4,60 @@ using System.Text.Json;
 using System.Collections.Concurrent;
 using FleetBackend.Models;
 
-public class ConnectedSocket
+public class ConnectedSocket : IDisposable
 {
     public Guid ConnectionId { get; init; }
     public WebSocket WebSocket { get; init; } = default!;
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
+
+    public async Task SendTextAsync(byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        if (WebSocket.State != WebSocketState.Open) return;
+
+        await _sendLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (WebSocket.State == WebSocketState.Open)
+            {
+                await WebSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+            }
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _sendLock.Dispose();
+    }
 }
 
 public interface ICommunicationGateway
 {
     SystemMode SystemMode { get; set; }
-    ConcurrentDictionary<Guid, ConnectedSocket> UnitySockets { get; }
-    ConcurrentDictionary<string, ConnectedSocket> RobotSockets { get; }
+    IReadOnlyDictionary<Guid, ConnectedSocket> UnitySockets { get; }
+    IReadOnlyDictionary<string, ConnectedSocket> RobotSockets { get; }
+
+    void RegisterUnitySocket(Guid connectionId, WebSocket socket);
+    void RegisterRobotSocket(string robotId, Guid connectionId, WebSocket socket);
+    void RemoveSocket(Guid connectionId);
 
     Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default);
     Task SendDashboardAsync(SocketMessage message, CancellationToken cancellationToken = default);
-    void RemoveSocket(Guid connectionId);
 }
 
 public class CommunicationGateway : ICommunicationGateway
 {
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly ConcurrentDictionary<Guid, ConnectedSocket> unitySockets = new();
-    private readonly ConcurrentDictionary<string, ConnectedSocket> robotSockets = new();
+    private readonly ConcurrentDictionary<Guid, ConnectedSocket> _unitySockets = new();
+    private readonly ConcurrentDictionary<string, ConnectedSocket> _robotSockets = new();
+    private readonly ConcurrentDictionary<Guid, string> _connectionToRobotId = new();
 
     public SystemMode SystemMode { get; set; }
-    public ConcurrentDictionary<Guid, ConnectedSocket> UnitySockets => unitySockets;
-    public ConcurrentDictionary<string, ConnectedSocket> RobotSockets => robotSockets;
+    public IReadOnlyDictionary<Guid, ConnectedSocket> UnitySockets => _unitySockets;
+    public IReadOnlyDictionary<string, ConnectedSocket> RobotSockets => _robotSockets;
 
     public CommunicationGateway(JsonSerializerOptions jsonOptions)
     {
@@ -37,17 +65,47 @@ public class CommunicationGateway : ICommunicationGateway
         _jsonOptions = jsonOptions;
     }
 
+    public void RegisterUnitySocket(Guid connectionId, WebSocket socket)
+    {
+        var client = new ConnectedSocket
+        {
+            ConnectionId = connectionId,
+            WebSocket = socket
+        };
+        _unitySockets.TryAdd(connectionId, client);
+    }
+
+    public void RegisterRobotSocket(string robotId, Guid connectionId, WebSocket socket)
+    {
+        var client = new ConnectedSocket
+        {
+            ConnectionId = connectionId,
+            WebSocket = socket
+        };
+
+        _connectionToRobotId[connectionId] = robotId;
+
+        if (_robotSockets.TryGetValue(robotId, out var oldClient))
+        {
+            oldClient.Dispose();
+        }
+
+        _robotSockets[robotId] = client;
+    }
+
     public void RemoveSocket(Guid connectionId)
     {
-        if (unitySockets.TryRemove(connectionId, out _))
-            return;
-
-        foreach (var pair in robotSockets)
+        if (_unitySockets.TryRemove(connectionId, out var unitySocket))
         {
-            if (pair.Value.ConnectionId == connectionId)
+            unitySocket.Dispose();
+            return;
+        }
+
+        if (_connectionToRobotId.TryRemove(connectionId, out var robotId))
+        {
+            if (_robotSockets.TryRemove(robotId, out var robotSocket))
             {
-                robotSockets.TryRemove(pair.Key, out _);
-                return;
+                robotSocket.Dispose();
             }
         }
     }
@@ -71,36 +129,34 @@ public class CommunicationGateway : ICommunicationGateway
 
     private async Task SendUnity(SocketMessage message, CancellationToken cancellationToken)
     {
+        if (_unitySockets.IsEmpty) return;
+
         var json = JsonSerializer.Serialize(message, _jsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
 
-        var toRemove = new List<Guid>();
-        foreach (var kv in unitySockets)
+        var tasks = _unitySockets.Select(async kv =>
         {
             var id = kv.Key;
             var client = kv.Value;
-            var ws = client.WebSocket;
 
-            if (ws.State != WebSocketState.Open)
+            if (client.WebSocket.State != WebSocketState.Open)
             {
-                toRemove.Add(id);
-                continue;
+                RemoveSocket(id);
+                return;
             }
 
             try
             {
-                await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+                await client.SendTextAsync(bytes, cancellationToken);
             }
-            catch
+            catch (Exception ex)
             {
-                toRemove.Add(id);
+                Logger.Log($"Error sending message to Unity socket {id}: {ex.Message}");
+                RemoveSocket(id);
             }
-        }
+        });
 
-        foreach (var id in toRemove)
-        {
-            unitySockets.TryRemove(id, out _);
-        }
+        await Task.WhenAll(tasks);
     }
 
     private async Task SendRobot(SocketMessage message, CancellationToken cancellationToken)
@@ -108,16 +164,14 @@ public class CommunicationGateway : ICommunicationGateway
         if (string.IsNullOrWhiteSpace(message.RobotId))
             return;
 
-        if (!robotSockets.TryGetValue(message.RobotId, out var client))
+        if (!_robotSockets.TryGetValue(message.RobotId, out var client))
         {
             return;
         }
 
-        var ws = client.WebSocket;
-
-        if (ws.State != WebSocketState.Open)
+        if (client.WebSocket.State != WebSocketState.Open)
         {
-            robotSockets.TryRemove(message.RobotId, out _);
+            RemoveSocket(client.ConnectionId);
             return;
         }
 
@@ -126,11 +180,12 @@ public class CommunicationGateway : ICommunicationGateway
             var json = JsonSerializer.Serialize(message, _jsonOptions);
             var bytes = Encoding.UTF8.GetBytes(json);
 
-            await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+            await client.SendTextAsync(bytes, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
-            robotSockets.TryRemove(message.RobotId, out _);
+            Logger.Log($"Error sending message to Robot socket {message.RobotId}: {ex.Message}");
+            RemoveSocket(client.ConnectionId);
         }
     }
 }
