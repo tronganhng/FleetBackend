@@ -5,12 +5,14 @@ using FleetBackend.Services;
 public class RegisterRobotHandler : IMessageHandler
 {
     private readonly IRobotManager _robotManager;
+    private readonly ICommunicationGateway _gateway;
 
     public SocketMessageType MessageType => SocketMessageType.RegisterRobot;
 
-    public RegisterRobotHandler(IRobotManager robotManager)
+    public RegisterRobotHandler(IRobotManager robotManager, ICommunicationGateway gateway)
     {
         _robotManager = robotManager;
+        _gateway = gateway;
     }
 
     public Task<SocketMessage?> HandleAsync(SocketMessage socketMessage, JsonSerializerOptions jsonOptions)
@@ -20,6 +22,7 @@ public class RegisterRobotHandler : IMessageHandler
         if (payloadData != null)
         {
             var robotId = _robotManager.RegisterRobot(payloadData);
+            _gateway.SetRobotIdToSocket(robotId, socketMessage.ConnectionId);
             var response = new SocketMessage
             {
                 Type = SocketMessageType.ServerResponse,

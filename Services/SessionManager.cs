@@ -53,7 +53,7 @@ namespace FleetBackend.Services
             _trafficManager.Clear();
             _mapManager.Clear();
             _taskExecuteManager.Clear();
-            _gateway.ClearRobotSockets();
+            _gateway.ResetRobotIdSockets();
 
             return CurrentSessionId;
         }

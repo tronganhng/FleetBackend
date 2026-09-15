@@ -70,6 +70,8 @@ public class ServerReceiver : IServerReceiver
 
                     if (socketMessage is null) continue;
 
+                    socketMessage.ConnectionId = connectionId;
+
                     if (socketMessage.Type == SocketMessageType.RegisterClient)
                     {
                         registeredClientType = ClientRegisterHandle(socketMessage, socket, connectionId);
@@ -126,10 +128,8 @@ public class ServerReceiver : IServerReceiver
                     _gateway.RegisterUnitySocket(connectionId, socket);
                     break;
                 case ClientType.Robot:
-                    if (!string.IsNullOrWhiteSpace(socketMessage.RobotId))
-                    {
-                        _gateway.RegisterRobotSocket(socketMessage.RobotId, connectionId, socket);
-                    }
+                    _gateway.RegisterRobotSocket(connectionId, socket);
+
                     break;
             }
 
