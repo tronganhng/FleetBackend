@@ -1,8 +1,13 @@
+using System.Text.Json;
+using FleetBackend.Models;
+
 namespace FleetBackend.Services
 {
     public interface ISessionManager
     {
-        void Reset();
+        string CurrentSessionId { get; }
+        SystemMode CurrentMode { get; }
+        string StartNewSession(SystemMode mode);
     }
 
     public class SessionManager : ISessionManager
@@ -12,24 +17,45 @@ namespace FleetBackend.Services
         private readonly ITrafficManager _trafficManager;
         private readonly IMapManager _mapManager;
         private readonly ITaskExecuteManager _taskExecuteManager;
+        private readonly ICommunicationGateway _gateway;
+        private readonly JsonSerializerOptions _jsonOptions;
 
-        public SessionManager(IRobotManager robotManager, ITaskManager taskManager, ITrafficManager trafficManager, IMapManager mapManager, ITaskExecuteManager taskExecuteManager)
+        public string CurrentSessionId { get; private set; } = Guid.NewGuid().ToString("N");
+        public SystemMode CurrentMode => _gateway.SystemMode;
+
+        public SessionManager(
+            IRobotManager robotManager,
+            ITaskManager taskManager,
+            ITrafficManager trafficManager,
+            IMapManager mapManager,
+            ITaskExecuteManager taskExecuteManager,
+            ICommunicationGateway gateway,
+            JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
             _taskManager = taskManager;
             _trafficManager = trafficManager;
             _mapManager = mapManager;
             _taskExecuteManager = taskExecuteManager;
+            _gateway = gateway;
+            _jsonOptions = jsonOptions;
         }
 
-        public void Reset()
+        public string StartNewSession(SystemMode mode)
         {
-            Logger.Log("Clear Session");
+            CurrentSessionId = Guid.NewGuid().ToString("N");
+            _gateway.SystemMode = mode;
+
+            Logger.Log($"[SessionManager] Starting new session '{CurrentSessionId}' with mode '{mode}'");
+
             _robotManager.Clear();
             _taskManager.Clear();
             _trafficManager.Clear();
             _mapManager.Clear();
             _taskExecuteManager.Clear();
+            _gateway.ClearRobotSockets();
+
+            return CurrentSessionId;
         }
     }
 }

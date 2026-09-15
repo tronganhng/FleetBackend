@@ -37,7 +37,7 @@ namespace FleetBackend.Services
         public string RegisterRobot(RobotStateDto state)
         {
             var robotId = string.IsNullOrWhiteSpace(state.RobotId)
-                ? $"Robot_{_robots.Count + 1:00}"
+                ? GenerateUniqueRobotId()
                 : state.RobotId;
 
             state.RobotId = robotId;
@@ -47,6 +47,16 @@ namespace FleetBackend.Services
             return robotId;
         }
 
+        private string GenerateUniqueRobotId()
+        {
+            int index = 1;
+            while (_robots.ContainsKey($"Robot_{index:00}"))
+            {
+                index++;
+            }
+            return $"Robot_{index:00}";
+        }
+
         public void UpdateRobotState(RobotStateDto state)
         {
             if (string.IsNullOrWhiteSpace(state.RobotId))
@@ -54,7 +64,12 @@ namespace FleetBackend.Services
                 return;
             }
 
-            var robot = _robots[state.RobotId];
+            if (!_robots.TryGetValue(state.RobotId, out var robot))
+            {
+                Logger.Log($"Received RobotState for unregistered robot '{state.RobotId}'. Ignoring.");
+                return;
+            }
+
             robot.State.CopyFrom(state);
             if (robot.State.Status == RobotStatus.Offline)
             {

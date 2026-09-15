@@ -18,9 +18,9 @@ public class SetSystemModeHandler : IMessageHandler
     public Task<SocketMessage?> HandleAsync(SocketMessage socketMessage, JsonSerializerOptions jsonOptions)
     {
         SystemMode systemMode = socketMessage.Payload.Deserialize<SystemMode>(jsonOptions);
-        _gateway.SystemMode = systemMode;
-        _sessionManager.Reset();
-        Logger.Log("System mode change: " + systemMode);
+
+        _sessionManager.StartNewSession(systemMode);
+
         return Task.FromResult<SocketMessage?>(null);
     }
 }

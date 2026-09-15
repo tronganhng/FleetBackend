@@ -78,7 +78,7 @@ public class ServerReceiver : IServerReceiver
 
                     if (registeredClientType == ClientType.Robot && _gateway.SystemMode == SystemMode.Simulation)
                     {
-                        // Logger.Log($"Blocked message '{socketMessage.Type}' from Robot on connection {connectionId} because system is in Simulation mode.");
+                        Logger.Log($"Blocked '{socketMessage.Type}' from Robot because system is in Simulation.");
                         continue;
                     }
 

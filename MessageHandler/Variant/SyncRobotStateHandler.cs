@@ -19,12 +19,12 @@ public class SyncRobotStateHandler : IMessageHandler
     {
         RobotStateDto? payloadData = socketMessage.Payload.Deserialize<RobotStateDto>(jsonOptions);
 
-        if (payloadData != null)
+        if (payloadData != null && !string.IsNullOrWhiteSpace(payloadData.RobotId))
         {
             _robotManager.UpdateRobotState(payloadData);
 
-            // if OP mode -> sync unity
-            if (_gateway.SystemMode == SystemMode.Operation)
+            // if OP mode and robot is registered in current session -> sync unity
+            if (_gateway.SystemMode == SystemMode.Operation && _robotManager.GetRobot(payloadData.RobotId) != null)
             {
                 var message = new SocketMessage
                 {

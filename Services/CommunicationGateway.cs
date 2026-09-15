@@ -43,6 +43,7 @@ public interface ICommunicationGateway
     void RegisterUnitySocket(Guid connectionId, WebSocket socket);
     void RegisterRobotSocket(string robotId, Guid connectionId, WebSocket socket);
     void RemoveSocket(Guid connectionId);
+    void ClearRobotSockets();
 
     Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default);
     Task SendDashboardAsync(SocketMessage message, CancellationToken cancellationToken = default);
@@ -108,6 +109,12 @@ public class CommunicationGateway : ICommunicationGateway
                 robotSocket.Dispose();
             }
         }
+    }
+
+    public void ClearRobotSockets()
+    {
+        _robotSockets.Clear();
+        _connectionToRobotId.Clear();
     }
 
     public async Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default)
