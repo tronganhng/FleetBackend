@@ -41,7 +41,10 @@ namespace FleetBackend.Services.Task
 
             _taskManager.UpdateTaskStatus(_task.TaskId, Models.TaskStatus.Running);
 
-            MoveToPickup();
+            if (_robot != null &&_robot.CurrentNode == _mapManager.Graph.GetNode(_task.PickupLocation))
+                MoveToDestination();
+            else
+                MoveToPickup();
         }
 
         public void OnRobotArrived()
