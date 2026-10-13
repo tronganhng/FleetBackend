@@ -21,6 +21,8 @@ namespace FleetBackend.Services.Task
 
         private Robot? _robot;
         private TaskExecutorStep _step;
+        private readonly object _dockWaitLock = new();
+        private string? _waitingDockNode;
 
         public string RobotId => _task.AssignedRobotId ?? string.Empty;
 
@@ -41,8 +43,11 @@ namespace FleetBackend.Services.Task
 
             _taskManager.UpdateTaskStatus(_task.TaskId, Models.TaskStatus.Running);
 
-            if (_robot != null &&_robot.CurrentNode == _mapManager.Graph.GetNode(_task.PickupLocation))
+            if (_robot != null && _robot.CurrentNode == _mapManager.Graph.GetNode(_task.PickupLocation))
+            {
+                _robot.ChangeStatus(RobotStatus.DoingTask);
                 MoveToDestination();
+            }
             else
                 MoveToPickup();
         }
@@ -95,18 +100,7 @@ namespace FleetBackend.Services.Task
         private void MoveToPickupDock()
         {
             _step = TaskExecutorStep.MoveToPickupDock;
-            var dock = _mapManager.Dock.AcquireDock(_task.PickupLocation);
-            if (dock == null)
-            {
-                _mapManager.Dock.OnDockReleased += OnDockReleased;
-                return;
-            }
-            if (_robot != null)
-            {
-                _robot.MoveTo(dock.Position);
-                _robot.CurrentDock = dock;
-                _robot.CurrentNode = _mapManager.Graph.GetNode(_task.PickupLocation);
-            }
+            WaitForDock(_task.PickupLocation);
         }
 
         private void MoveToDestination()
@@ -120,18 +114,43 @@ namespace FleetBackend.Services.Task
         private void MoveToDestinationDock()
         {
             _step = TaskExecutorStep.MoveToDestinationDock;
-            var dock = _mapManager.Dock.AcquireDock(_task.Destination);
-            if (dock == null)
+            WaitForDock(_task.Destination);
+        }
+
+        private void WaitForDock(string nodeName)
+        {
+            lock (_dockWaitLock)
             {
-                _mapManager.Dock.OnDockReleased += OnDockReleased;
-                return;
+                // Subscribe before acquiring so a concurrent release cannot be missed.
+                if (_waitingDockNode == null)
+                    _mapManager.Dock.OnDockReleased += OnDockReleased;
+
+                _waitingDockNode = nodeName;
             }
-            if (_robot != null)
+
+            TryMoveToDock(nodeName);
+        }
+
+        private void TryMoveToDock(string nodeName)
+        {
+            MapPointDto? dock;
+            lock (_dockWaitLock)
             {
-                _robot.MoveTo(dock.Position);
-                _robot.CurrentNode = _mapManager.Graph.GetNode(_task.Destination);
-                _robot.CurrentDock = dock;
+                if (_robot == null || _waitingDockNode != nodeName)
+                    return;
+
+                dock = _mapManager.Dock.AcquireDock(nodeName);
+                if (dock == null)
+                    return;
+
+                _waitingDockNode = null;
+                _mapManager.Dock.OnDockReleased -= OnDockReleased;
             }
+
+            // Moving can release another dock and invoke other executors' callbacks.
+            _robot.MoveTo(dock.Position);
+            _robot.CurrentNode = _mapManager.Graph.GetNode(nodeName);
+            _robot.CurrentDock = dock;
         }
 
         private void Complete()
@@ -146,15 +165,7 @@ namespace FleetBackend.Services.Task
 
         private void OnDockReleased(string nodeName)
         {
-            if (_step == TaskExecutorStep.MoveToPickupDock && nodeName == _task.PickupLocation)
-            {
-                MoveToPickupDock();
-            }
-            else if (_step == TaskExecutorStep.MoveToDestinationDock && nodeName == _task.Destination)
-            {
-                MoveToDestinationDock();
-            }
-            _mapManager.Dock.OnDockReleased -= OnDockReleased;
+            TryMoveToDock(nodeName);
         }
     }
 }

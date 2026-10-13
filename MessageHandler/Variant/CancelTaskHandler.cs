@@ -27,13 +27,13 @@ public class CancelTaskHandler : IMessageHandler
             {
                 if (task.AssignedRobotId != null) 
                 {
+                    _taskExecuteManager.RemoveExecutor(task.AssignedRobotId);
                     var robot  = _robotManager.GetRobot(task.AssignedRobotId);
                     if (robot != null) 
                     {
                         robot.ClearCurrentTask();
                         robot.ChangeStatus(RobotStatus.Idle);
                     }
-                    _taskExecuteManager.RemoveExecutor(task.AssignedRobotId);
                 }
                 _taskManager.CancelTask(task);
             }

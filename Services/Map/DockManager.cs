@@ -79,8 +79,11 @@ namespace FleetBackend.Services.Map
         public bool ReleaseDock(string nodeName, string dockName)
         {
             var key = (nodeName, dockName);
+            if (!_occupied.TryUpdate(key, false, true))
+                return false;
+
             OnDockReleased?.Invoke(nodeName);
-            return _occupied.TryUpdate(key, false, true);
+            return true;
         }
 
         public MapPointDto? GetDock(string nodeName, string dockName)
