@@ -24,8 +24,10 @@ public class SyncRobotStateHandler : IMessageHandler
             _robotManager.UpdateRobotState(payloadData);
 
             // if OP mode and robot is registered in current session -> sync unity
-            if (_gateway.SystemMode == SystemMode.Operation && _robotManager.GetRobot(payloadData.RobotId) != null)
+            var robot = _robotManager.GetRobot(payloadData.RobotId);
+            if (_gateway.SystemMode == SystemMode.Operation && robot != null)
             {
+                payloadData.Status = robot.State.Status;
                 var message = new SocketMessage
                 {
                     Type = SocketMessageType.RobotState,

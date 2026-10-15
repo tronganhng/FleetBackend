@@ -10,6 +10,7 @@ namespace FleetBackend.Services.Task
             None,
             MoveToPickup,
             MoveToPickupDock,
+            WaitingToMoveToDestination,
             MoveToDestination,
             MoveToDestinationDock,
             Completed
@@ -105,10 +106,21 @@ namespace FleetBackend.Services.Task
 
         private void MoveToDestination()
         {
+            _step = TaskExecutorStep.WaitingToMoveToDestination;
+            _ = MoveToDestinationAfterDelayAsync();
+        }
+
+        private async System.Threading.Tasks.Task MoveToDestinationAfterDelayAsync()
+        {
+            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(5));
+
+            if (_step != TaskExecutorStep.WaitingToMoveToDestination || _robot == null)
+                return;
+
             _step = TaskExecutorStep.MoveToDestination;
             var node = _mapManager.Graph.GetNode(_task.Destination);
             if (node == null) return;
-            _robot?.MoveTo(node.Position);
+            _robot.MoveTo(node.Position);
         }
 
         private void MoveToDestinationDock()

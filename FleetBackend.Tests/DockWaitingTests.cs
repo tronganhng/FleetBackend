@@ -137,7 +137,11 @@ public class DockWaitingTests
             executor.OnRobotArrived();
             if (nodeName == "room2")
             {
+                int moveCount = Gateway.MoveCount(robotId);
                 executor.OnRobotArrived();
+                Assert.True(SpinWait.SpinUntil(
+                    () => Gateway.MoveCount(robotId) > moveCount,
+                    TimeSpan.FromSeconds(10)));
                 executor.OnRobotArrived();
             }
             return robot;
