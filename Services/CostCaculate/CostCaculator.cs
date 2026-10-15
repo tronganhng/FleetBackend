@@ -37,7 +37,7 @@ public class CostCaculator : ICostCaculator
 
         float distance = _pathFinder.GetShortestDistance(robotNode.NodeName, task.PickupLocation);
 
-        float cost = Math.Clamp(distance / 100f, 0, 1);
+        float cost = Math.Clamp(distance / 10f, 0, 1);
 
         // Logger.Log($"Distance Cost {robot.RobotId} form {robotPoint.PointName} to {task.PickupLocation}: " + cost);
 
