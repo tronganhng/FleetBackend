@@ -112,7 +112,7 @@ namespace FleetBackend.Services.Task
 
         private async System.Threading.Tasks.Task MoveToDestinationAfterDelayAsync()
         {
-            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(5));
+            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(2));
 
             if (_step != TaskExecutorStep.WaitingToMoveToDestination || _robot == null)
                 return;

@@ -36,6 +36,7 @@ namespace FleetBackend.Models
         Room,
         SharedResource,
         WaitingArea,
+        Elevator,
     }
 
     public enum SocketMessageType
