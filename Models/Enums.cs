@@ -31,6 +31,12 @@ namespace FleetBackend.Models
         Cancelled
     }
 
+    public enum ElevatorStatus
+    {
+        Idle,
+        Moving,
+    }
+
     public enum NodeType
     {
         Room,
@@ -56,5 +62,6 @@ namespace FleetBackend.Models
         RobotArrived,
         ChangeRobotStatus,
         ChargeRobot,
+        RegisterElevator,
     }
 }
