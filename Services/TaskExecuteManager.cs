@@ -10,6 +10,7 @@ namespace FleetBackend.Services
         void ExecuteTask(DeliveryTask task);
         void RemoveExecutor(string robotId);
         void OnRobotArrived(string robotId);
+        void OnElevatorArrived(string elevatorId);
     }
 
     public class TaskExecuteManager : ITaskExecuteManager
@@ -48,6 +49,11 @@ namespace FleetBackend.Services
             {
                 executor.OnRobotArrived();
             }
+        }
+
+        public void OnElevatorArrived(string elevatorId)
+        {
+            
         }
 
         private void RemoveExecutor(TaskExecutor executor)

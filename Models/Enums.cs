@@ -63,5 +63,7 @@ namespace FleetBackend.Models
         ChangeRobotStatus,
         ChargeRobot,
         RegisterElevator,
+        MoveElevator,
+        ElevatorArrived,
     }
 }

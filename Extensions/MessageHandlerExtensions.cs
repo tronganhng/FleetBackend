@@ -12,6 +12,7 @@ public static class MessageHandlerExtensions
         services.AddSingleton<IMessageHandler, ResourceAccessHandler>();
         services.AddSingleton<IMessageHandler, ResourceReleaseHandler>();
         services.AddSingleton<IMessageHandler, RobotArrivedHandler>();
+        services.AddSingleton<IMessageHandler, ElevatorArrivedHandler>();
         services.AddSingleton<IMessageHandler, SetSystemModeHandler>();
         return services;
     }
