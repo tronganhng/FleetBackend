@@ -133,6 +133,8 @@ public class CommunicationGateway : ICommunicationGateway
     {
         if (SystemMode == SystemMode.Operation)
         {
+            if (message.Type == SocketMessageType.MoveElevator)
+                throw new NotSupportedException("Operation mode requires an elevator communication adapter.");
             await SendRobot(message, cancellationToken);
         }
         else if (SystemMode == SystemMode.Simulation)

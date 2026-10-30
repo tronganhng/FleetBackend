@@ -86,7 +86,8 @@ public class Robot
     {
         if (CurrentNode != null && _mapManager.Dock.IsNodeFull(CurrentNode.NodeName))
         {
-            var waitingNodes = _mapManager.Graph.GetNodesBy(NodeType.WaitingArea);
+            var floor = CurrentNode.Floor;
+            var waitingNodes = _mapManager.Graph.GetNodesBy(NodeType.WaitingArea).Where(node => node.Floor == floor);
             foreach (var node in waitingNodes)
             {
                 var dock = _mapManager.Dock.AcquireDock(node.NodeName);

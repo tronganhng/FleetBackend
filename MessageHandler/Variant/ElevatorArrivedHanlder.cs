@@ -20,9 +20,8 @@ public class ElevatorArrivedHandler : IMessageHandler
         ElevatorDto? elevator = socketMessage.Payload.Deserialize<ElevatorDto>(jsonOptions);
         if (elevator != null && !string.IsNullOrWhiteSpace(elevator.ElevatorId))
         {
-            _elevatorManager.UpdateElevator(elevator);
-            _taskExecuteManager.OnElevatorArrived(elevator.ElevatorId);
-            Logger.Log("Elevator Arrived");
+            if (_elevatorManager.UpdateElevator(elevator))
+                _taskExecuteManager.OnElevatorArrived(elevator.ElevatorId);
         }
 
         return Task.FromResult<SocketMessage?>(null);

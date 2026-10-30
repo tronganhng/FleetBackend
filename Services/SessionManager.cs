@@ -13,6 +13,7 @@ namespace FleetBackend.Services
     public class SessionManager : ISessionManager
     {
         private readonly IRobotManager _robotManager;
+        private readonly IElevatorManager _elevatorManager;
         private readonly ITaskManager _taskManager;
         private readonly ITrafficManager _trafficManager;
         private readonly IMapManager _mapManager;
@@ -25,6 +26,7 @@ namespace FleetBackend.Services
 
         public SessionManager(
             IRobotManager robotManager,
+            IElevatorManager elevatorManager,
             ITaskManager taskManager,
             ITrafficManager trafficManager,
             IMapManager mapManager,
@@ -33,6 +35,7 @@ namespace FleetBackend.Services
             JsonSerializerOptions jsonOptions)
         {
             _robotManager = robotManager;
+            _elevatorManager = elevatorManager;
             _taskManager = taskManager;
             _trafficManager = trafficManager;
             _mapManager = mapManager;
@@ -49,6 +52,7 @@ namespace FleetBackend.Services
             Logger.Log($"[SessionManager] Starting new session '{CurrentSessionId}' with mode '{mode}'");
 
             _robotManager.Clear();
+            _elevatorManager.Clear();
             _taskManager.Clear();
             _trafficManager.Clear();
             _mapManager.Clear();

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace FleetBackend.Services.Task
 {
-    public class TaskExecutor
+    public class TaskExecutor : IDisposable
     {
         private enum TaskExecutorStep
         {
@@ -13,6 +13,7 @@ namespace FleetBackend.Services.Task
             WaitingToMoveToDestination,
             MoveToDestination,
             MoveToDestinationDock,
+            TraversingElevator,
             Completed
         }
         private readonly DeliveryTask _task;
@@ -20,21 +21,36 @@ namespace FleetBackend.Services.Task
         private readonly IMapManager _mapManager;
         private readonly ITaskManager _taskManager;
 
+        private readonly IElevatorManager? _elevators;
+        private readonly ITrafficManager? _traffic;
+        private readonly ICommunicationGateway? _gateway;
+        private readonly JsonSerializerOptions _json;
+        private readonly object _gate;
+        private ElevatorTraversal? _traversal;
+        private bool _disposed;
         private Robot? _robot;
         private TaskExecutorStep _step;
         private readonly object _dockWaitLock = new();
         private string? _waitingDockNode;
 
         public string RobotId => _task.AssignedRobotId ?? string.Empty;
+        public bool RequiresElevatorRecovery => _traversal?.RequiresRecovery == true;
 
         public Action<TaskExecutor>? OnCompleted { get; set; }
 
-        public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager)
+        public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager,
+            IElevatorManager? elevators = null, ITrafficManager? traffic = null,
+            ICommunicationGateway? gateway = null, JsonSerializerOptions? json = null, object? gate = null)
         {
             _task = task;
             _robotManager = robotManager;
             _mapManager = mapManager;
             _taskManager = taskManager;
+            _elevators = elevators;
+            _traffic = traffic;
+            _gateway = gateway;
+            _json = json ?? new JsonSerializerOptions();
+            _gate = gate ?? new object();
         }
 
         public void Execute()
@@ -55,26 +71,41 @@ namespace FleetBackend.Services.Task
 
         public void OnRobotArrived()
         {
-            if (_robot == null)
-                return;
-
-            switch (_step)
+            lock (_gate)
             {
-                case TaskExecutorStep.MoveToPickup:
-                    MoveToPickupDock();
-                    break;
+                if (_robot == null || _disposed) return;
+                if (_traversal != null)
+                {
+                    _traversal.OnRobotArrived();
+                    return;
+                }
 
-                case TaskExecutorStep.MoveToPickupDock:
-                    MoveToDestination();
-                    break;
+                switch (_step)
+                {
+                    case TaskExecutorStep.MoveToPickup:
+                        MoveToPickupDock();
+                        break;
 
-                case TaskExecutorStep.MoveToDestination:
-                    MoveToDestinationDock();
-                    break;
+                    case TaskExecutorStep.MoveToPickupDock:
+                        MoveToDestination();
+                        break;
 
-                case TaskExecutorStep.MoveToDestinationDock:
-                    Complete();
-                    break;
+                    case TaskExecutorStep.MoveToDestination:
+                        MoveToDestinationDock();
+                        break;
+
+                    case TaskExecutorStep.MoveToDestinationDock:
+                        Complete();
+                        break;
+                }
+            }
+        }
+
+        public void OnElevatorArrived(string elevatorId)
+        {
+            lock (_gate)
+            {
+                if (!_disposed) _traversal?.OnElevatorArrived(elevatorId);
             }
         }
 
@@ -91,11 +122,8 @@ namespace FleetBackend.Services.Task
 
         private void MoveToPickup()
         {
-            _step = TaskExecutorStep.MoveToPickup;
-            var node = _mapManager.Graph.GetNode(_task.PickupLocation);
-            if (node == null) return;
-            _robot?.MoveTo(node.Position);
             _robot?.ChangeStatus(RobotStatus.DoingTask);
+            MoveToNode(_task.PickupLocation, TaskExecutorStep.MoveToPickup);
         }
 
         private void MoveToPickupDock()
@@ -114,13 +142,79 @@ namespace FleetBackend.Services.Task
         {
             await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(2));
 
-            if (_step != TaskExecutorStep.WaitingToMoveToDestination || _robot == null)
-                return;
+            lock (_gate)
+            {
+                if (_disposed || _step != TaskExecutorStep.WaitingToMoveToDestination || _robot == null)
+                    return;
+                MoveToNode(_task.Destination, TaskExecutorStep.MoveToDestination);
+            }
+        }
 
-            _step = TaskExecutorStep.MoveToDestination;
-            var node = _mapManager.Graph.GetNode(_task.Destination);
-            if (node == null) return;
-            _robot.MoveTo(node.Position);
+        private void MoveToNode(string nodeName, TaskExecutorStep arrivalStep)
+        {
+            if (_robot == null) return;
+            var target = _mapManager.Graph.GetNode(nodeName);
+            var current = _robot.CurrentNode ?? _mapManager.Graph.GetRobotNode(_robot.State);
+            if (current == null)
+            {
+                Fail("Cannot determine the robot's current node.");
+                return;
+            }
+            if (current.Floor == target.Floor)
+            {
+                _step = arrivalStep;
+                _robot.MoveTo(target.Position);
+                return;
+            }
+
+            var elevators = _elevators?.GetAllElevators().ToArray();
+            var sources = _mapManager.Graph.GetNodesBy(NodeType.Elevator).Where(n => n.Floor == current.Floor).ToArray();
+            var destinations = _mapManager.Graph.GetNodesBy(NodeType.Elevator).Where(n => n.Floor == target.Floor).ToArray();
+            if (elevators?.Length != 1 || _traffic == null || _gateway == null ||
+                sources.Length != 1 || destinations.Length != 1 ||
+                sources[0].MapPoints.Count == 0 || destinations[0].MapPoints.Count == 0)
+            {
+                Fail("Cross-floor travel requires one registered elevator and one elevator node with cabin points on each floor.");
+                return;
+            }
+
+            _step = TaskExecutorStep.TraversingElevator;
+            _traversal = new ElevatorTraversal(_robot, _mapManager, _elevators!, _traffic, _gateway,
+                _json, _gate, sources[0], destinations[0], elevators[0].ElevatorId,
+                () =>
+                {
+                    _traversal = null;
+                    _step = arrivalStep;
+                    _robot.MoveTo(target.Position);
+                }, Fail);
+            _traversal.Start();
+        }
+
+        private void Fail(string reason)
+        {
+            Logger.Log($"Task {_task.TaskId} failed: {reason}");
+            _taskManager.UpdateTaskStatus(_task.TaskId, Models.TaskStatus.Failed);
+            Dispose();
+            _robot?.ClearCurrentTask();
+            _robot?.ChangeStatus(RobotStatus.Error);
+            OnCompleted?.Invoke(this);
+            OnCompleted = null;
+        }
+
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                if (_disposed) return;
+                _disposed = true;
+                _traversal?.Dispose();
+                _traversal = null;
+                lock (_dockWaitLock)
+                {
+                    _waitingDockNode = null;
+                    _mapManager.Dock.OnDockReleased -= OnDockReleased;
+                }
+            }
         }
 
         private void MoveToDestinationDock()
@@ -177,7 +271,10 @@ namespace FleetBackend.Services.Task
 
         private void OnDockReleased(string nodeName)
         {
-            TryMoveToDock(nodeName);
+            lock (_gate)
+            {
+                if (!_disposed) TryMoveToDock(nodeName);
+            }
         }
     }
 }

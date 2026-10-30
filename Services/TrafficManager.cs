@@ -7,6 +7,8 @@ namespace FleetBackend.Services
         void Clear();
         bool RequestAccess(string robotId, string resourceId);
         string ReleaseAccess(string robotId, string resourceId);
+        void CancelRequest(string robotId, string resourceId);
+        event Action<string, string>? AccessGranted;
     }
 
 
@@ -31,10 +33,12 @@ namespace FleetBackend.Services
         }
 
         private readonly ConcurrentDictionary<string, ResourceState> _resources = new();
+        private readonly object _gate = new();
+        public event Action<string, string>? AccessGranted;
 
         public void Clear()
         {
-            _resources.Clear();
+            lock (_gate) _resources.Clear();
         }
 
         public bool RequestAccess(string robotId, string resourceId)
@@ -45,10 +49,9 @@ namespace FleetBackend.Services
                 return false;
             }
 
-            var resource = _resources.GetOrAdd(resourceId, _ => new ResourceState(resourceId, robotId));
-
-            lock (resource)
+            lock (_gate)
             {
+                var resource = _resources.GetOrAdd(resourceId, _ => new ResourceState(resourceId, robotId));
                 // Nếu vừa tạo thì robot này đã là owner
                 if (resource.OwnerRobotId == robotId)
                     return true;
@@ -64,11 +67,11 @@ namespace FleetBackend.Services
 
         public string ReleaseAccess(string robotId, string resourceId)
         {
-            if (!_resources.TryGetValue(resourceId, out var resource))
-                return string.Empty;
-
-            lock (resource)
+            string nextRobot;
+            lock (_gate)
             {
+                if (!_resources.TryGetValue(resourceId, out var resource))
+                    return string.Empty;
                 if (resource.OwnerRobotId != robotId)
                     return string.Empty;
 
@@ -78,12 +81,24 @@ namespace FleetBackend.Services
                     return string.Empty;
                 }
 
-                var nextRobot = resource.WaitingRobots.Dequeue();
+                nextRobot = resource.WaitingRobots.Dequeue();
 
                 resource.OwnerRobotId = nextRobot;
                 resource.AcquiredTime = DateTime.UtcNow;
 
-                return nextRobot;
+            }
+            AccessGranted?.Invoke(nextRobot, resourceId);
+            return nextRobot;
+        }
+
+        public void CancelRequest(string robotId, string resourceId)
+        {
+            lock (_gate)
+            {
+                if (!_resources.TryGetValue(resourceId, out var resource)) return;
+                var remaining = resource.WaitingRobots.Where(id => id != robotId).ToArray();
+                resource.WaitingRobots.Clear();
+                foreach (var id in remaining) resource.WaitingRobots.Enqueue(id);
             }
         }
     }
