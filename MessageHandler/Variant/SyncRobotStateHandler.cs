@@ -28,6 +28,7 @@ public class SyncRobotStateHandler : IMessageHandler
             if (_gateway.SystemMode == SystemMode.Operation && robot != null)
             {
                 payloadData.Status = robot.State.Status;
+                payloadData.Floor = robot.State.Floor;
                 var message = new SocketMessage
                 {
                     Type = SocketMessageType.RobotState,

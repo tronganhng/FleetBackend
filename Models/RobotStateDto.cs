@@ -6,6 +6,7 @@ namespace FleetBackend.Models
     public class RobotStateDto
     {
         public string RobotId { get; set; } = string.Empty;
+        public int Floor { get; set; } = 1;
         public double X { get; set; }
         public double Y { get; set; }
         public double Rotation { get; set; }

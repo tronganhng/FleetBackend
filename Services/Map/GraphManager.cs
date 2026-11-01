@@ -55,6 +55,9 @@ namespace FleetBackend.Services.Map
 
             foreach (var point in _nodes)
             {
+                if (point.Floor != robot.Floor)
+                    continue;
+
                 if (point.Position.Length < 2)
                     continue;
 

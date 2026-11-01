@@ -96,6 +96,7 @@ public sealed class ElevatorTraversal : IDisposable
         }
         else if (_step == Step.Riding && elevator.CurrentFloor == _destination.Floor)
         {
+            _robot.State.Floor = elevator.CurrentFloor;
             SetStep(Step.Exiting);
             _robot.MoveTo(_destination.Position);
         }

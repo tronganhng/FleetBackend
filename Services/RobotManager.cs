@@ -41,6 +41,7 @@ namespace FleetBackend.Services
                 : state.RobotId;
 
             state.RobotId = robotId;
+            state.Floor = 1;
             state.LastHeartbeat = state.LastHeartbeat == default ? DateTime.Now : state.LastHeartbeat;
             _robots[robotId] = new Robot(state, _mapManager, _eventBus, _gateway, _jsonOptions);
 
