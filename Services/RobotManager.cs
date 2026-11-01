@@ -72,6 +72,7 @@ namespace FleetBackend.Services
             }
 
             robot.State.CopyFrom(state);
+            Logger.Log(robot.State.Floor.ToString());
             if (robot.State.Status == RobotStatus.Offline)
             {
                 robot.ChangeStatus(RobotStatus.Idle);
