@@ -1,0 +1,416 @@
+TÀI LIỆU TÍCH HỢP ĐIỀU KHIỂN THANG MÁY QUA MQTT CHO ASP.NET
+Ngày lập: 05/11/2026
+Mã hóa: UTF-8
+
+1. PHẠM VI VÀ MỨC ĐỘ XÁC NHẬN
+============================================================
+Tài liệu được suy ra từ mã nguồn client robot trong repository elevator_manager.
+Nguồn chính:
+- src/elevator_robot/elevator_robot/elevator_manager.py
+  Các hàm mqtt_on_connect, mqtt_on_message, publish_command,
+  wait_for_elevator_arrival, open_door, close_door và start_trip.
+- src/elevator_robot/elevator_robot/map_switcher.py: client phụ/độc lập.
+- src/elevator_robot/elevator_robot/elevator_gui.py: hiển thị trạng thái.
+- config/elevator.yaml: tọa độ robot theo tầng.
+
+Repository không có firmware/bộ điều khiển phía thang máy, bản đặc tả giao thức
+chính thức hoặc bản ghi MQTT thực tế. Vì vậy:
+- Format request bên dưới là format client hiện tại thực sự tạo ra.
+- Format response là các trường và trạng thái client hiện tại đọc/chờ.
+- Các JSON response là ví dụ minh họa tương thích với client, KHÔNG phải log
+  thu từ thiết bị, cũng không khẳng định đây là toàn bộ trường thiết bị trả về.
+- Các hướng dẫn thiết kế ASP.NET là đề xuất tích hợp, không phải tính năng
+  đã được triển khai trong controller.
+
+2. KIẾN TRÚC KẾT NỐI
+============================================================
+ASP.NET MQTT client -> MQTT broker -> Bộ điều khiển thang máy
+ASP.NET MQTT client <- MQTT broker <- Bộ điều khiển thang máy
+
+Không có HTTP endpoint điều khiển thang trong mã nguồn được đọc.
+ASP.NET có thể cung cấp HTTP API riêng cho ứng dụng của bạn, rồi chuyển yêu
+cầu thành MQTT. Không gửi HTTP trực tiếp vào cổng MQTT.
+
+Cấu hình trong elevator_manager.py:
+  Host:          10.11.55.162
+  Port:          1883
+  Keep alive:    60 giây
+  Request topic: elevator/request
+  Status topic:  elevator/status
+  Robot ID:      robot3
+  Publish QoS:   1
+  Retain request: không bật; client dùng mặc định retain=False
+  Subscribe QoS: không chỉ định; mặc định của lời gọi Paho hiện tại là 0
+  Username/password: không cấu hình trong mã nguồn
+  TLS: không cấu hình trong mã nguồn
+
+Lưu ý khác biệt: map_switcher.py dùng broker 10.11.62.44:1883.
+Đây là hai giá trị cấu hình khác nhau trong repository. Tài liệu lấy manager
+làm nguồn chính; cần xác nhận IP broker đang chạy trước khi triển khai.
+Không thể suy ra broker thực tế không yêu cầu xác thực chỉ từ code client.
+
+Phân biệt:
+- MQTT client ID định danh kết nối đến broker; đặt riêng cho dịch vụ ASP.NET
+  và tránh trùng với client khác đang chạy.
+- robot_id là trường trong JSON nghiệp vụ. MQTT client ID không thay thế nó.
+- Việc controller chấp nhận robot_id khác robot3 chưa được xác nhận.
+
+3. FORMAT JSON REQUEST
+============================================================
+Gửi payload JSON dạng object, mã hóa UTF-8, vào topic elevator/request.
+Tên thuộc tính và tên command giữ đúng chữ thường/chữ hoa như ví dụ.
+Không dùng tên thuộc tính kiểu RobotId, Command hoặc DestinationFloor trên wire.
+
+Schema request theo manager:
+  robot_id          string   Có trong mọi request do manager tạo; giá trị robot3.
+  command           string   Có trong mọi request; một trong 4 lệnh ở mục 4.
+  destination_floor integer  Có khi gọi thang; bỏ trường khi dùng lệnh khác.
+
+Ví dụ tổng quát cho lệnh gọi tầng:
+  {"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":2}
+
+Quy ước áp dụng cho client mới để tương thích:
+- Tầng là số nguyên JSON 1 hoặc 2, không phải "1", "2", 1.5 hay null.
+- Chỉ tầng 1 và 2 được luồng robot hiện tại hỗ trợ. Khả năng của thiết bị
+  ngoài hai tầng này chưa được xác nhận.
+- Các lệnh không chọn tầng phải bỏ destination_floor, không cần gửi null.
+- Không có elevator_id, source_floor, room, request_id hoặc timestamp trong
+  request do manager tạo.
+- Số phòng như 101/201 không gửi xuống thang: robot tự đổi phòng thành tầng.
+- map_switcher.py tạo request chỉ có command và destination_floor nếu có,
+  không có robot_id. Điều này chứng minh có client gửi biến thể đó; không
+  chứng minh controller cho phép bỏ robot_id. Nên dùng format của manager.
+
+4. CÁC LỆNH VÀ ĐIỀU KIỆN HOÀN THÀNH
+============================================================
+4.1. GET_STATUS - yêu cầu cập nhật trạng thái
+Request:
+  {"robot_id":"robot3","command":"GET_STATUS"}
+Topic nhận dữ liệu: elevator/status.
+Client hiện tại kỳ vọng cập nhật current_floor và/hoặc state qua callback.
+Không có response envelope riêng hoặc ACK nghiệp vụ được client xử lý.
+Manager gửi lệnh này ngay sau khi subscribe lúc kết nối và trước khi gọi thang.
+Trước khi gọi thang, manager chỉ sleep 1 giây rồi đọc cache; không đối chiếu
+response với GET_STATUS cụ thể. Đây là hành vi code, không phải cam kết thiết
+bị sẽ phản hồi trong 1 giây.
+
+4.2. CALL_ELEVATOR - yêu cầu thang đến tầng chỉ định
+Gọi tầng 1:
+  {"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":1}
+Gọi tầng 2:
+  {"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":2}
+
+Cùng một command được dùng cho cả hai trường hợp:
+- Gọi thang đến đón robot tại tầng hiện tại.
+- Khi robot đã ở trong cabin, yêu cầu thang đến tầng đích.
+Không có lệnh riêng tên GO_TO_FLOOR trong client hiện tại.
+
+Điều kiện hoàn thành mà manager chờ:
+  state == "ARRIVED" và tầng đến == destination_floor.
+Ví dụ status tương thích khi tới tầng 2:
+  {"current_floor":2,"state":"ARRIVED"}
+
+Timeout của manager:
+- Đến đón tại tầng robot: 60 giây.
+- Đưa robot đến tầng đích: 120 giây.
+Đây là timeout phía ứng dụng; không phải thông số hành trình của thiết bị.
+ARRIVED không được dùng như xác nhận cửa đã mở. Manager gửi OPEN_DOOR riêng.
+Không xác nhận được thiết bị có tự đóng/mở cửa khi CALL_ELEVATOR hay không.
+
+4.3. OPEN_DOOR - yêu cầu mở cửa
+Request:
+  {"robot_id":"robot3","command":"OPEN_DOOR"}
+Điều kiện hoàn thành: state == "DOOR_OPEN".
+Ví dụ status ở tầng 1:
+  {"current_floor":1,"state":"DOOR_OPEN"}
+Timeout manager: 15 giây.
+Lệnh không có tham số tầng; ứng dụng phải xác nhận thang đã đến tầng cần dùng.
+Menu map_switcher gọi chức năng này là "Mở / giữ cửa", nhưng repository không
+có thời gian giữ cửa, lệnh gia hạn hoặc cam kết cửa mở vô hạn. Cần xác nhận
+chính sách tự đóng cửa của controller trước khi dựa vào việc giữ mở.
+
+4.4. CLOSE_DOOR - yêu cầu đóng cửa
+Request:
+  {"robot_id":"robot3","command":"CLOSE_DOOR"}
+Điều kiện hoàn thành: state == "DOOR_CLOSED".
+Ví dụ status ở tầng 2:
+  {"current_floor":2,"state":"DOOR_CLOSED"}
+Timeout manager: 15 giây.
+Luồng robot chỉ gửi sau khi robot vào đúng parking hoặc đã xác nhận ra ngoài.
+Không có thông tin cảm biến vật cản hoặc trạng thái khóa cửa riêng trong
+schema mà client đang đọc.
+
+5. RESPONSE / STATUS CỦA THANG MÁY
+============================================================
+Mọi dữ liệu thang mà manager xử lý đều đến từ topic elevator/status.
+Đây là luồng sự kiện/cập nhật trạng thái, không phải HTTP response và không
+có quan hệ request-response 1:1 được mã nguồn xác nhận.
+
+5.1. Các trường client sử dụng
+  current_floor:
+    Ý nghĩa: tầng thang báo về.
+    Kiểu nên dùng khi tích hợp: số nguyên JSON.
+    Manager ép bằng int(...); map_switcher sử dụng trực tiếp như khóa số.
+    Để tương thích cả hai, dùng số nguyên 1 hoặc 2.
+    Việc giá trị này biểu diễn gì khi thang đang chạy chưa được xác nhận.
+
+  state:
+    Ý nghĩa: chuỗi trạng thái thang.
+    Các chuỗi được dùng trực tiếp để chờ kết quả:
+      ARRIVED     - thang báo đã đến tầng.
+      DOOR_OPEN   - thang báo cửa mở.
+      DOOR_CLOSED - thang báo cửa đóng.
+    So sánh có phân biệt chữ hoa/thường.
+
+UNKNOWN là giá trị khởi tạo phía manager/nhãn GUI khi chưa biết trạng thái.
+Chưa có bằng chứng controller phát chuỗi UNKNOWN.
+Các trạng thái như MOVING, IDLE, ERROR, DOOR_OPENING, DOOR_CLOSING không được
+đặc tả hoặc xử lý riêng trong repository. Không coi chúng là response đã xác
+nhận. Client ASP.NET nên giữ nguyên chuỗi lạ để log/hiển thị khi gặp thực tế.
+
+5.2. Ví dụ payload tối thiểu tương thích với client
+  {"current_floor":1,"state":"ARRIVED"}
+  {"current_floor":1,"state":"DOOR_OPEN"}
+  {"current_floor":1,"state":"DOOR_CLOSED"}
+  {"current_floor":2,"state":"ARRIVED"}
+  {"current_floor":2,"state":"DOOR_OPEN"}
+  {"current_floor":2,"state":"DOOR_CLOSED"}
+
+Các ví dụ trên không khẳng định mọi message thực tế đều có cả hai trường.
+Manager cập nhật từng trường nếu trường đó có mặt; do đó chấp nhận partial:
+  {"current_floor":2}
+  {"state":"DOOR_OPEN"}
+Trong khi đó map_switcher bỏ qua message nếu thiếu một trong hai trường.
+Client ASP.NET cần phân biệt trường vắng mặt và giá trị hiện tại trong cache.
+Không tự điền current_floor=0 khi thiếu trường.
+
+5.3. Những trường / response CHƯA xác nhận
+Không thấy client đọc hoặc mô tả:
+- success, accepted, error_code, error_message.
+- request_id / correlation_id, command echo.
+- robot_id hoặc elevator_id trong status để định tuyến response.
+- destination_floor, direction, moving, door sensor, occupancy.
+- timestamp/sequence phát từ controller.
+- ACK/NACK nghiệp vụ hoặc message lỗi của lệnh không hợp lệ.
+- Heartbeat, tần suất publish status, QoS publish của controller, retain status.
+
+Các trường trên có thể tồn tại ở firmware, nhưng repository không đủ dữ liệu
+để xác nhận. Không tự tạo format lỗi rồi coi đó là hợp đồng của thiết bị.
+Nếu thang có thêm trường, lưu raw JSON để điều tra và mở rộng sau.
+
+5.4. Publish thành công không có nghĩa thao tác đã hoàn thành
+Publish QoS 1 cung cấp cơ chế giao nhận ít nhất một lần ở mức MQTT; message
+có thể bị lặp. PUBACK không phải xác nhận thang đã đến tầng hoặc cửa đã mở.
+QoS của chặng controller/status chưa được xác nhận từ repository.
+Hoàn thành nghiệp vụ phải dựa trên status tương ứng và trạng thái chuyến.
+
+6. CHUỖI ĐIỀU KHIỂN MẪU: ROBOT TẦNG 1 ĐẾN TẦNG 2
+============================================================
+Điều kiện: robot biết mình đang ở tầng 1, đã đến điểm chờ ngoài thang.
+Các status dưới đây là minh họa, không cam kết thiết bị chỉ phát các message này.
+
+Bước 1 - kết nối MQTT, đăng ký nhận elevator/status trước khi gửi lệnh.
+Bước 2 - gửi GET_STATUS:
+  TX elevator/request: {"robot_id":"robot3","command":"GET_STATUS"}
+  RX elevator/status:  {"current_floor":2,"state":"DOOR_CLOSED"}
+
+Bước 3 - nếu thang khác tầng robot, gọi đến tầng 1:
+  TX: {"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":1}
+  Chờ RX có: {"current_floor":1,"state":"ARRIVED"}
+  Nếu thang đã ở tầng 1, manager bỏ qua bước gọi đến đón.
+
+Bước 4 - mở cửa tầng 1:
+  TX: {"robot_id":"robot3","command":"OPEN_DOOR"}
+  Chờ RX có state=DOOR_OPEN.
+
+Bước 5 - hệ thống robot đưa robot vào cabin và xác nhận vào đúng vị trí.
+  Không có lệnh MQTT ROBOT_ENTERED trong client hiện tại.
+  Manager dùng Nav2 tới parking_pose, nhận thành công rồi chờ thêm 2 giây.
+
+Bước 6 - đóng cửa:
+  TX: {"robot_id":"robot3","command":"CLOSE_DOOR"}
+  Chờ RX có state=DOOR_CLOSED.
+
+Bước 7 - chọn tầng 2:
+  TX: {"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":2}
+  Chờ RX có current_floor=2 và state=ARRIVED, timeout 120 giây.
+
+Bước 8 - mở cửa tầng 2:
+  TX: {"robot_id":"robot3","command":"OPEN_DOOR"}
+  Chờ RX có state=DOOR_OPEN.
+
+Bước 9 - hệ thống robot đổi bản đồ và định vị lại trong cabin.
+  Manager nạp map tầng đích, gửi initialpose 5 lần tại parking của map mới.
+  Kiểm tra AMCL gần parking <=0,75 m khoảng 1 giây, rồi đợi thêm 5 giây.
+  Đây là logic robot/ROS, không phải chức năng của giao thức MQTT thang máy.
+
+Bước 10 - robot đi ra và tiếp tục tới phòng đích.
+  Manager chạy Nav2 tới phòng trên thread riêng, đồng thời theo dõi AMCL.
+  Điều kiện xác nhận ra ngoài:
+  - Từng thấy khoảng cách tới parking <1,5 m trong lần theo dõi hiện tại.
+  - Sau đó khoảng cách >=1,5 m liên tục ít nhất 1 giây.
+  - Chờ thêm 2 giây sau khi xác nhận.
+  Nếu không xác nhận trong 120 giây, báo lỗi và không gửi CLOSE_DOOR ở bước này.
+  Không có lệnh MQTT ROBOT_EXITED trong client hiện tại.
+
+Bước 11 - đóng cửa tầng 2:
+  TX: {"robot_id":"robot3","command":"CLOSE_DOOR"}
+  Chờ RX có state=DOOR_CLOSED.
+  Robot vẫn tiếp tục chạy tới phòng; đóng cửa không cần chờ robot tới phòng.
+
+Nếu dự án ASP.NET chỉ điều khiển thang, nó không cần ROS, map hoặc AMCL.
+Tuy nhiên, nếu điều phối robot, phải nhận xác nhận đã vào/đã ra từ hệ thống
+robot qua kênh tích hợp riêng trước khi chuyển sang bước đóng cửa.
+
+7. ĐỀ XUẤT TỔ CHỨC TRONG ASP.NET
+============================================================
+Đây là hướng dẫn kiến trúc, không phải API có sẵn của controller.
+
+7.1. Dịch vụ MQTT nền
+- Dùng một dịch vụ nền quản lý kết nối MQTT và vòng đời reconnect.
+- Đưa broker, port, client ID, robot_id và timeout vào cấu hình.
+- Sau mỗi kết nối/reconnect: subscribe status, hoàn tất đăng ký nhận rồi gửi
+  GET_STATUS để cập nhật lại dữ liệu.
+- Ghi nhận raw payload, topic, thời điểm nhận theo UTC và cờ retained nếu
+  thư viện cung cấp. Không log mật khẩu/token.
+- Khi mất kết nối, hiển thị disconnected; dữ liệu cache chỉ là last-known.
+
+7.2. Tách "trạng thái thang" và "tiến trình yêu cầu"
+Trạng thái thang:
+  CurrentFloor (nullable integer), State (nullable string), ReceivedAtUtc,
+  IsConnected, RawPayload.
+Nếu cho phép partial update, nên có FloorReceivedAtUtc và StateReceivedAtUtc
+riêng để không coi cả cache là dữ liệu mới chỉ vì nhận một trường.
+
+Tiến trình yêu cầu phía ASP.NET:
+  Command, TargetFloor, StartedAtUtc, DeadlineUtc, Pending/Completed/TimedOut.
+Các trạng thái tiến trình này là dữ liệu nội bộ ứng dụng, không gửi chúng
+như state của thang và không khẳng định controller có cùng state machine.
+
+7.3. Điều kiện chờ sự kiện
+- Đăng ký bộ chờ trước khi publish để tránh bỏ lỡ status phản hồi nhanh.
+- CALL_ELEVATOR: chờ cập nhật ARRIVED tại đúng tầng mục tiêu.
+- OPEN_DOOR: chờ cập nhật DOOR_OPEN.
+- CLOSE_DOOR: chờ cập nhật DOOR_CLOSED.
+- Áp dụng timeout/cancellation; không chặn thread HTTP bằng sleep.
+- Không coi cache đã thỏa điều kiện từ trước khi gửi lệnh là ACK cho lệnh mới.
+- Status retained hoặc status nhận trễ có thể là dữ liệu cũ. Thời điểm nhận
+  mới chỉ là dấu hiệu cục bộ, không chứng minh status do chính lệnh vừa gửi.
+- Vì không có request_id/sequence/timestamp được xác nhận, không thể bảo đảm
+  liên kết chính xác một status với một request chỉ bằng format hiện tại.
+- Nếu thiếu current_floor trong ARRIVED, không tự kết luận tầng đến chỉ từ
+  cache cũ; chờ dữ liệu đủ hoặc đánh dấu kết quả chưa xác định.
+
+7.4. Xử lý đồng thời và lỗi
+- Tuần tự hóa thao tác cho cùng thang; không để nhiều HTTP request gửi các
+  lệnh trái nhau đồng thời.
+- Khóa trong một process không ngăn các instance ASP.NET hay client robot
+  khác gửi lệnh. Nếu chạy nhiều bên, cần cơ chế điều phối chung.
+- Topic hiện tại dùng chung, không có elevator_id. Không thể định tuyến
+  nhiều thang độc lập chỉ từ schema đã biết.
+- MQTT QoS 1 có thể làm request lặp; chưa xác nhận controller chống lặp.
+  Không tự động retry lệnh điều khiển sau timeout mà chưa đối chiếu lại status.
+- Timeout có nghĩa chưa xác nhận kết quả, không chứng minh thang chưa thực thi.
+- Hủy HTTP request/Task không hủy thao tác vật lý đã gửi. Không có lệnh STOP,
+  CANCEL hoặc RESET được xác nhận trong client hiện tại.
+- JSON lỗi/kiểu trường sai: log payload, bỏ cập nhật không hợp lệ, giữ dịch vụ
+  nhận tin hoạt động. Trường lạ nên được bỏ qua hoặc lưu để phân tích.
+
+7.5. DTO C# tham khảo cho JSON, không phụ thuộc thư viện MQTT cụ thể
+Các DTO này dành cho System.Text.Json; không bao gồm kết nối/publish MQTT.
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+public sealed class ElevatorCommand
+{
+    [JsonPropertyName("robot_id")]
+    public string RobotId { get; set; } = "robot3";
+
+    [JsonPropertyName("command")]
+    public string Command { get; set; } = "";
+
+    [JsonPropertyName("destination_floor")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DestinationFloor { get; set; }
+}
+
+public sealed class ElevatorStatus
+{
+    [JsonPropertyName("current_floor")]
+    public int? CurrentFloor { get; set; }
+
+    [JsonPropertyName("state")]
+    public string? State { get; set; }
+}
+
+Ví dụ serialize request:
+  var payload = JsonSerializer.Serialize(new ElevatorCommand
+  {
+      Command = "CALL_ELEVATOR",
+      DestinationFloor = 2
+  });
+  // Publish payload UTF-8 vào elevator/request, QoS 1, retain=false.
+
+Ví dụ deserialize status:
+  var status = JsonSerializer.Deserialize<ElevatorStatus>(payload);
+  // Kiểm tra null/kiểu dữ liệu và bắt JsonException ở tầng nhận message.
+  // DTO nullable này biểu diễn dữ liệu thiếu, không phân biệt được missing
+  // với explicit null. Dùng JsonDocument nếu cần kiểm tra sự có mặt của trường.
+
+7.6. Gợi ý HTTP API của dự án mới (TỰ THIẾT KẾ, không phải API thiết bị)
+  GET  /api/elevator/status
+       Trả cache, thời điểm nhận và trạng thái kết nối.
+  POST /api/elevator/call       body: {"destination_floor":2}
+       Ánh xạ sang CALL_ELEVATOR.
+  POST /api/elevator/door/open  -> OPEN_DOOR
+  POST /api/elevator/door/close -> CLOSE_DOOR
+Đối với hành trình dài, có thể trả operationId nội bộ rồi cho frontend theo
+dõi. operationId đó không được controller echo qua giao thức đang biết.
+Không trả "đã đến tầng" ngay khi publish thành công.
+
+8. KHÔNG NHẦM STATUS ROS CỦA MANAGER VỚI RESPONSE MQTT CỦA THANG
+============================================================
+Topic ROS /elevator/manager_status là std_msgs/String chứa JSON do manager
+tự tạo mỗi 0,5 giây để GUI sử dụng, gồm:
+  robot_floor, robot_x, robot_y, robot_waiting, robot_inside,
+  elevator_floor, elevator_state, trip_active,
+  destination_floor, destination_room.
+
+Đây không phải payload nhận từ elevator/status. Ví dụ:
+- MQTT status dùng current_floor và state.
+- ROS manager status dùng elevator_floor và elevator_state.
+- Tọa độ robot, trạng thái chuyến và phòng đích do manager quản lý.
+ASP.NET subscribe MQTT sẽ không tự nhận các trường ROS ở trên.
+Muốn có chúng phải bổ sung bridge/tích hợp riêng với hệ thống robot.
+
+9. GIỚI HẠN CỦA CLIENT HIỆN TẠI CẦN TRÁNH SAO CHÉP NGUYÊN XI
+============================================================
+- GET_STATUS ở đầu chuyến đợi cố định 1 giây, có thể đọc cache chưa cập nhật.
+- Callback manager ghép các trường status vào cache; nếu nhận partial message
+  có thể ghép state cũ với floor mới rồi ghi last_arrived_floor. Client mới
+  cần xác định rõ điều kiện sử dụng dữ liệu partial.
+- open_door/close_door chỉ kiểm tra state cache, có thể thành công ngay do
+  trạng thái cũ đã trùng giá trị cần chờ.
+- Không có correlation ID hoặc xác nhận lệnh riêng.
+- Khi lỗi, manager ghi log và kết thúc chuyến; không có chuỗi phục hồi chung
+  hoặc hủy goal Nav2 đang chạy.
+- Nhánh chuyển tầng không có phòng đích gọi wait_for_robot_exit hai lần;
+  đây là vấn đề logic robot, không phải yêu cầu giao thức thang máy.
+
+10. THÔNG TIN CẦN XÁC NHẬN TỪ THIẾT BỊ ĐỂ CHỐT HỢP ĐỒNG TÍCH HỢP
+============================================================
+1) Broker thực tế là IP nào; có username/password/TLS/ACL không?
+2) Payload status đầy đủ và tất cả các state/error mà controller có thể phát?
+3) Status được phát định kỳ, theo sự kiện hay chỉ khi GET_STATUS?
+4) QoS/retain của status; có heartbeat và timestamp/sequence không?
+5) robot_id có bắt buộc, có kiểm tra quyền hoặc khóa quyền điều khiển không?
+6) Khi CALL_ELEVATOR cùng tầng, đang chạy hoặc cửa mở, controller xử lý thế nào?
+7) OPEN_DOOR mở trong bao lâu, có tự đóng, có cần gửi giữ cửa định kỳ không?
+8) Lệnh lặp có an toàn/được chống lặp không; có ACK/NACK/correlation không?
+9) Khi mất mạng hoặc mất nguồn, trạng thái và lệnh đang thực hiện xử lý ra sao?
+10) Có nhiều thang hay nhiều bên điều khiển cùng topic không?
+
+Các điểm chưa xác nhận không nên được suy diễn thành tính năng đã có.
+Tài liệu hiện đủ để tái tạo các request và điều kiện chờ mà robot đang dùng;
+muốn mô tả đầy đủ mọi response thực tế cần firmware/spec hoặc log từ controller.

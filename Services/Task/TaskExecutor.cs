@@ -1,5 +1,7 @@
 using FleetBackend.Models;
 using System.Text.Json;
+using FleetBackend.Options;
+using FleetBackend.Services.Elevator;
 
 namespace FleetBackend.Services.Task
 {
@@ -26,6 +28,10 @@ namespace FleetBackend.Services.Task
         private readonly ICommunicationGateway? _gateway;
         private readonly JsonSerializerOptions _json;
         private readonly object _gate;
+        private readonly ElevatorAdapterResolver? _adapters;
+        private readonly ElevatorRecoveryStore? _recovery;
+        private readonly ElevatorMqttOptions _options;
+        private bool _requiresRecovery;
         private ElevatorTraversal? _traversal;
         private bool _disposed;
         private Robot? _robot;
@@ -34,13 +40,14 @@ namespace FleetBackend.Services.Task
         private string? _waitingDockNode;
 
         public string RobotId => _task.AssignedRobotId ?? string.Empty;
-        public bool RequiresElevatorRecovery => _traversal?.RequiresRecovery == true;
+        public bool RequiresElevatorRecovery => _requiresRecovery || _traversal?.RequiresRecovery == true;
 
         public Action<TaskExecutor>? OnCompleted { get; set; }
 
         public TaskExecutor(DeliveryTask task, IRobotManager robotManager, IMapManager mapManager, ITaskManager taskManager,
             IElevatorManager? elevators = null, ITrafficManager? traffic = null,
-            ICommunicationGateway? gateway = null, JsonSerializerOptions? json = null, object? gate = null)
+            ICommunicationGateway? gateway = null, JsonSerializerOptions? json = null, object? gate = null,
+            ElevatorAdapterResolver? adapters = null, ElevatorRecoveryStore? recovery = null, ElevatorMqttOptions? options = null)
         {
             _task = task;
             _robotManager = robotManager;
@@ -51,6 +58,9 @@ namespace FleetBackend.Services.Task
             _gateway = gateway;
             _json = json ?? new JsonSerializerOptions();
             _gate = gate ?? new object();
+            _adapters = adapters;
+            _recovery = recovery;
+            _options = options ?? new ElevatorMqttOptions();
         }
 
         public void Execute()
@@ -101,11 +111,11 @@ namespace FleetBackend.Services.Task
             }
         }
 
-        public void OnElevatorArrived(string elevatorId)
+        public void OnRobotFloorReady(string requestId, RobotFloorReadyPayload payload)
         {
             lock (_gate)
             {
-                if (!_disposed) _traversal?.OnElevatorArrived(elevatorId);
+                if (!_disposed) _traversal?.OnRobotFloorReady(requestId, payload);
             }
         }
 
@@ -167,10 +177,12 @@ namespace FleetBackend.Services.Task
                 return;
             }
 
+            var physical = _gateway?.SystemMode == SystemMode.Operation;
             var elevators = _elevators?.GetAllElevators().ToArray();
             var sources = _mapManager.Graph.GetNodesBy(NodeType.Elevator).Where(n => n.Floor == current.Floor).ToArray();
             var destinations = _mapManager.Graph.GetNodesBy(NodeType.Elevator).Where(n => n.Floor == target.Floor).ToArray();
-            if (elevators?.Length != 1 || _traffic == null || _gateway == null ||
+            if ((!physical && elevators?.Length != 1) || _traffic == null || _gateway == null ||
+                _adapters == null || _recovery == null ||
                 sources.Length != 1 || destinations.Length != 1 ||
                 sources[0].MapPoints.Count == 0 || destinations[0].MapPoints.Count == 0)
             {
@@ -178,9 +190,17 @@ namespace FleetBackend.Services.Task
                 return;
             }
 
+            var elevatorId = physical ? _options.ElevatorId : elevators![0].ElevatorId;
+            if (physical && (!_options.Enabled || _recovery.RequiresRecovery(elevatorId)))
+            {
+                Fail("Physical elevator is disabled or requires recovery.");
+                return;
+            }
+
             _step = TaskExecutorStep.TraversingElevator;
-            _traversal = new ElevatorTraversal(_robot, _mapManager, _elevators!, _traffic, _gateway,
-                _json, _gate, sources[0], destinations[0], elevators[0].ElevatorId,
+            _traversal = new ElevatorTraversal(_robot, _mapManager, _traffic, _gateway,
+                _adapters.ForMode(_gateway.SystemMode), _recovery, _options,
+                _json, _gate, sources[0], destinations[0], elevatorId,
                 () =>
                 {
                     _traversal = null;
@@ -207,6 +227,7 @@ namespace FleetBackend.Services.Task
             {
                 if (_disposed) return;
                 _disposed = true;
+                _requiresRecovery |= _traversal?.RequiresRecovery == true;
                 _traversal?.Dispose();
                 _traversal = null;
                 lock (_dockWaitLock)

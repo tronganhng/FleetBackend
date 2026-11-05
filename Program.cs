@@ -1,10 +1,16 @@
 using FleetBackend.Extensions;
 using FleetBackend.Services;
+using FleetBackend.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
+
+services.AddOptions<ElevatorMqttOptions>()
+    .Bind(builder.Configuration.GetSection(ElevatorMqttOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 services.AddSingleton(new JsonSerializerOptions
 {

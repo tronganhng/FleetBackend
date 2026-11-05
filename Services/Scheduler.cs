@@ -67,8 +67,11 @@ namespace FleetBackend.Services
             if (task == null || task.Status != Models.TaskStatus.Running) return;
 
             robot.ClearCurrentTask();
-            _taskManager.ResetTask(task);
-            _taskExecuteManager.RemoveExecutor(robot.State.RobotId);
+            var requiresRecovery = _taskExecuteManager.RemoveExecutor(robot.State.RobotId);
+            if (requiresRecovery)
+                _taskManager.UpdateTaskStatus(task.TaskId, Models.TaskStatus.Failed);
+            else
+                _taskManager.ResetTask(task);
 
             Schedule();
         }

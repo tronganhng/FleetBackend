@@ -24,3 +24,7 @@ appsettings.Development.json
 
 # Publish
 publish/
+
+# Runtime elevator ownership journal (preserve on disk across restarts)
+Data/elevator-recovery.json
+Data/elevator-recovery.json.tmp

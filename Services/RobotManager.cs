@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FleetBackend.Models;
+using FleetBackend.Services.Elevator;
 
 namespace FleetBackend.Services
 {
@@ -20,13 +21,16 @@ namespace FleetBackend.Services
         private readonly ICommunicationGateway _gateway;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly IEventBus _eventBus;
+        private readonly ElevatorRecoveryStore? _recovery;
 
-        public RobotManager(IEventBus eventBus, IMapManager mapManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions)
+        public RobotManager(IEventBus eventBus, IMapManager mapManager, ICommunicationGateway gateway, JsonSerializerOptions jsonOptions,
+            ElevatorRecoveryStore? recovery = null)
         {
             _eventBus = eventBus;
             _mapManager = mapManager;
             _gateway = gateway;
             _jsonOptions = jsonOptions;
+            _recovery = recovery;
         }
 
         public void Clear()
@@ -41,7 +45,8 @@ namespace FleetBackend.Services
                 : state.RobotId;
 
             state.RobotId = robotId;
-            state.Floor = 1;
+            if (_gateway.SystemMode == SystemMode.Simulation) state.Floor = 1;
+            if (_recovery?.GetAll().Any(entry => entry.RobotId == robotId) == true) state.Status = RobotStatus.Error;
             state.LastHeartbeat = state.LastHeartbeat == default ? DateTime.Now : state.LastHeartbeat;
             _robots[robotId] = new Robot(state, _mapManager, _eventBus, _gateway, _jsonOptions);
 
@@ -74,7 +79,8 @@ namespace FleetBackend.Services
             robot.State.CopyFrom(state);
             if (robot.State.Status == RobotStatus.Offline)
             {
-                robot.ChangeStatus(RobotStatus.Idle);
+                robot.ChangeStatus(_recovery?.GetAll().Any(entry => entry.RobotId == state.RobotId) == true
+                    ? RobotStatus.Error : RobotStatus.Idle);
             }
         }
 

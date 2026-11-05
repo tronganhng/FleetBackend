@@ -46,18 +46,22 @@ namespace FleetBackend.Services
 
         public string StartNewSession(SystemMode mode)
         {
-            CurrentSessionId = Guid.NewGuid().ToString("N");
-            _gateway.SystemMode = mode;
+            if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+            _taskExecuteManager.ResetSession(() =>
+            {
+                // Executors are already cancelled while the original transport is still active.
+                CurrentSessionId = Guid.NewGuid().ToString("N");
+                _gateway.SystemMode = mode;
 
-            Logger.Log($"[SessionManager] Starting new session '{CurrentSessionId}' with mode '{mode}'");
+                Logger.Log($"[SessionManager] Starting new session '{CurrentSessionId}' with mode '{mode}'");
 
-            _robotManager.Clear();
-            _elevatorManager.Clear();
-            _taskManager.Clear();
-            _trafficManager.Clear();
-            _mapManager.Clear();
-            _taskExecuteManager.Clear();
-            _gateway.ResetRobotIdSockets();
+                _robotManager.Clear();
+                _elevatorManager.Clear();
+                _taskManager.Clear();
+                _trafficManager.Clear();
+                _mapManager.Clear();
+                _ = _gateway.ResetRobotIdSockets();
+            });
 
             return CurrentSessionId;
         }

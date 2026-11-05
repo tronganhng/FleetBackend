@@ -65,5 +65,9 @@ namespace FleetBackend.Models
         RegisterElevator,
         MoveElevator,
         ElevatorArrived,
+        ChangeRobotFloor,
+        RobotFloorReady,
+        GetElevatorRecovery,
+        RecoverElevator,
     }
 }

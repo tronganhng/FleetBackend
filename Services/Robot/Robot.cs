@@ -38,11 +38,23 @@ public class Robot
             RobotId = State.RobotId,
             Payload = JsonSerializer.SerializeToElement(true, _jsonOptions)
         };
-        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
+        _ = SendObservedAsync(message);
     }
 
     public void MoveTo(float[] position)
     {
+        _ = ObserveMoveAsync(position);
+    }
+
+    private async Task ObserveMoveAsync(float[] position)
+    {
+        try { await MoveToAsync(position); }
+        catch (Exception ex) { Logger.Log($"Move command failed for {State.RobotId}: {ex.Message}"); }
+    }
+
+    public Task MoveToAsync(float[] position, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         if (CurrentDock != null && CurrentNode != null)
         {
             _mapManager.Dock.ReleaseDock(CurrentNode.NodeName, CurrentDock.PointName);
@@ -58,7 +70,7 @@ public class Robot
             Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
         };
 
-        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
+        return _gateway.SendCommandAsync(message, cancellationToken);
     }
 
     public void ChangeStatus(RobotStatus status)
@@ -73,7 +85,7 @@ public class Robot
             Payload = JsonSerializer.SerializeToElement(status, _jsonOptions)
         };
 
-        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
+        _ = SendObservedAsync(message);
 
         if (status == RobotStatus.Idle)
         {
@@ -110,6 +122,12 @@ public class Robot
             Payload = JsonSerializer.SerializeToElement(true, _jsonOptions)
         };
 
-        _ = _gateway.SendCommandAsync(message, CancellationToken.None);
+        _ = SendObservedAsync(message);
+    }
+
+    private async Task SendObservedAsync(SocketMessage message)
+    {
+        try { await _gateway.SendCommandAsync(message, CancellationToken.None); }
+        catch (Exception ex) { Logger.Log($"Robot command {message.Type} failed for {State.RobotId}: {ex.Message}"); }
     }
 }

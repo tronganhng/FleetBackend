@@ -14,7 +14,7 @@ public class ConnectedSocket : IDisposable
 
     public async Task SendTextAsync(byte[] bytes, CancellationToken cancellationToken = default)
     {
-        if (WebSocket.State != WebSocketState.Open) return;
+        if (WebSocket.State != WebSocketState.Open) throw new IOException("WebSocket is closed.");
 
         await _sendLock.WaitAsync(cancellationToken);
         try
@@ -23,6 +23,7 @@ public class ConnectedSocket : IDisposable
             {
                 await WebSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
             }
+            else throw new IOException("WebSocket closed while waiting to send.");
         }
         finally
         {
@@ -45,6 +46,7 @@ public interface ICommunicationGateway
     void RemoveSocket(Guid connectionId);
 
     void SetRobotIdToSocket(string robotId, Guid connectionId);
+    bool IsRobotConnection(string robotId, Guid connectionId) => false;
     Task ResetRobotIdSockets();
 
     Task SendCommandAsync(SocketMessage message, CancellationToken cancellationToken = default);
@@ -55,7 +57,7 @@ public class CommunicationGateway : ICommunicationGateway
 {
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ConcurrentDictionary<Guid, ConnectedSocket> _unitySockets = new();
-    private readonly List<ConnectedSocket> _robotSockets = new();
+    private readonly ConcurrentDictionary<Guid, ConnectedSocket> _robotSockets = new();
 
     public SystemMode SystemMode { get; set; }
 
@@ -82,7 +84,7 @@ public class CommunicationGateway : ICommunicationGateway
             ConnectionId = connectionId,
             WebSocket = socket
         };
-        _robotSockets.Add(client);
+        _robotSockets.TryAdd(connectionId, client);
     }
 
     public void RemoveSocket(Guid connectionId)
@@ -93,26 +95,27 @@ public class CommunicationGateway : ICommunicationGateway
             return;
         }
 
-        var client = _robotSockets.FirstOrDefault(c => c.ConnectionId == connectionId);
-        if (client != null)
+        if (_robotSockets.TryRemove(connectionId, out var client))
         {
             client.Dispose();
-            _robotSockets.Remove(client);
         }
     }
 
     public void SetRobotIdToSocket(string robotId, Guid connectionId)
     {
-        var client = _robotSockets.FirstOrDefault(c => c.ConnectionId == connectionId);
+        _robotSockets.TryGetValue(connectionId, out var client);
         if (client != null)
         {
             client.RobotId = robotId;
         }
     }
 
+    public bool IsRobotConnection(string robotId, Guid connectionId) =>
+        _robotSockets.TryGetValue(connectionId, out var client) && client.RobotId == robotId && client.WebSocket.State == WebSocketState.Open;
+
     public async Task ResetRobotIdSockets()
     {
-        foreach (var item in _robotSockets)
+        foreach (var item in _robotSockets.Values)
         {
             item.RobotId = string.Empty;
         }
@@ -134,7 +137,7 @@ public class CommunicationGateway : ICommunicationGateway
         if (SystemMode == SystemMode.Operation)
         {
             if (message.Type == SocketMessageType.MoveElevator)
-                throw new NotSupportedException("Operation mode requires an elevator communication adapter.");
+                throw new NotSupportedException("Use IElevatorAdapter for physical elevator commands.");
             await SendRobot(message, cancellationToken);
         }
         else if (SystemMode == SystemMode.Simulation)
@@ -183,19 +186,19 @@ public class CommunicationGateway : ICommunicationGateway
     private async Task SendRobot(SocketMessage message, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(message.RobotId))
-            return;
+            throw new ArgumentException("Robot command requires RobotId.");
 
 
-        var client = _robotSockets.FirstOrDefault(c => c.RobotId == message.RobotId);
+        var client = _robotSockets.Values.FirstOrDefault(c => c.RobotId == message.RobotId);
         if (client == null)
         {
-            return;
+            throw new IOException($"Robot {message.RobotId} is not connected.");
         }
 
         if (client.WebSocket.State != WebSocketState.Open)
         {
             RemoveSocket(client.ConnectionId);
-            return;
+            throw new IOException($"Robot {message.RobotId} socket is closed.");
         }
 
         try
@@ -205,10 +208,12 @@ public class CommunicationGateway : ICommunicationGateway
 
             await client.SendTextAsync(bytes, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             Logger.Log($"Error sending message to Robot socket {message.RobotId}: {ex.Message}");
             RemoveSocket(client.ConnectionId);
+            throw;
         }
     }
 
@@ -219,7 +224,7 @@ public class CommunicationGateway : ICommunicationGateway
         var json = JsonSerializer.Serialize(message, _jsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
 
-        var tasks = _robotSockets
+        var tasks = _robotSockets.Values
             .Select(client => Task.Run(async () =>
             {
                 if (client.WebSocket.State != WebSocketState.Open)
