@@ -74,6 +74,7 @@ public sealed class MqttElevatorTransport : BackgroundService, IElevatorMqttTran
 
                     // SUBACK first, then request current state on every connection. No replay of physical commands.
                     SetReady(true);
+                    Logger.Log("Elevator MQTT connected!");
                     await PublishAsync(ElevatorMqttCommand.GetStatus(), connection.Token);
                     while (_client.IsConnected && _gateway.SystemMode == SystemMode.Operation)
                         await global::System.Threading.Tasks.Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
@@ -81,7 +82,7 @@ public sealed class MqttElevatorTransport : BackgroundService, IElevatorMqttTran
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Elevator MQTT connection unavailable; retrying connection only");
+                    Logger.Log($"Elevator MQTT connect error: {ex.Message}");
                 }
                 finally { await DisconnectAsync(); }
 
