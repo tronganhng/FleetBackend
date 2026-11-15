@@ -142,15 +142,15 @@
       "NodeType": 3,
       "Floor": 2,
       "Position": [
-        -3.7,
-        8.25
+        -3.77,
+        7.27
       ],
       "MapPoints": [
         {
           "PointName": "point1",
           "Position": [
-            -3.77,
-            9.47
+            -3.71,
+            9.5
           ],
           "Yaw": 0.0
         }
@@ -181,12 +181,12 @@
     {
       "StartNode": "elevator",
       "EndNode": "elevator2",
-      "Distance": 8.324451
+      "Distance": 7.67860651
     },
     {
       "StartNode": "room3",
       "EndNode": "elevator2",
-      "Distance": 6.1372714
+      "Distance": 5.225323
     }
   ]
 }
