@@ -275,7 +275,7 @@ namespace FleetBackend.Services.Task
             }
 
             // Moving can release another dock and invoke other executors' callbacks.
-            _robot.MoveTo(dock.Position);
+            _robot.MoveTo(dock.Position, dock.Yaw);
             _robot.CurrentNode = _mapManager.Graph.GetNode(nodeName);
             _robot.CurrentDock = dock;
         }

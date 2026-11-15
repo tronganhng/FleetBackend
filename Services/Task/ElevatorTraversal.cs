@@ -179,7 +179,7 @@ public sealed class ElevatorTraversal : IDisposable
             EnsureActive();
             _step = step;
             arrival = _arrival = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            send = _robot.MoveToAsync(position, token);
+            send = _robot.MoveToAsync(position, token, yaw: dock?.Yaw);
             if (dock != null) { _robot.CurrentNode = _source; _robot.CurrentDock = dock; }
         }
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);

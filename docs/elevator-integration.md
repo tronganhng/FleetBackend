@@ -103,6 +103,20 @@ Timeouts are configurable in seconds. Pickup (60), travel (120) and door (15)
 defaults follow the source client. Status (15) and robot floor readiness (120)
 are backend defaults, not device guarantees.
 
+## Backend to robot: movement yaw
+
+In Operation, moves to a configured dock use the `MoveRobot` payload
+`[x, y, yaw]`, where yaw is in radians and comes from `MapPointDto.Yaw`.
+This includes cabin boarding, pickup/destination docks and waiting docks.
+Node approach/exit commands keep `[x, y]`; the robot defaults their yaw to zero.
+Simulation keeps the existing `[x, y]` format for Unity.
+
+The robot must pass all three values to Nav2 and send `RobotArrived` only after
+that goal succeeds. The source cabin goal must establish the configured heading
+before the ride: destination-map initialization assumes that physical cabin pose.
+Keep elevator cabin coordinates and yaw in `Data/Map.json` aligned with the
+robot's `config/elevator.yaml` parking poses on each floor.
+
 ## Backend to robot: change floor/map
 
 The following WebSocket messages are new backend contracts, not MQTT commands.

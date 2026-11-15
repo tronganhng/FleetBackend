@@ -41,18 +41,18 @@ public class Robot
         _ = SendObservedAsync(message);
     }
 
-    public void MoveTo(float[] position)
+    public void MoveTo(float[] position, float? yaw = null)
     {
-        _ = ObserveMoveAsync(position);
+        _ = ObserveMoveAsync(position, yaw);
     }
 
-    private async Task ObserveMoveAsync(float[] position)
+    private async Task ObserveMoveAsync(float[] position, float? yaw)
     {
-        try { await MoveToAsync(position); }
+        try { await MoveToAsync(position, yaw: yaw); }
         catch (Exception ex) { Logger.Log($"Move command failed for {State.RobotId}: {ex.Message}"); }
     }
 
-    public Task MoveToAsync(float[] position, CancellationToken cancellationToken = default)
+    public Task MoveToAsync(float[] position, CancellationToken cancellationToken = default, float? yaw = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (CurrentDock != null && CurrentNode != null)
@@ -67,7 +67,11 @@ public class Robot
             Type = SocketMessageType.MoveRobot,
             RequestId = null,
             RobotId = State.RobotId,
-            Payload = JsonSerializer.SerializeToElement(position, _jsonOptions)
+            // Simulation retains Unity's existing [x, y] payload.
+            Payload = JsonSerializer.SerializeToElement(
+                _gateway.SystemMode == SystemMode.Operation && yaw.HasValue
+                    ? new[] { position[0], position[1], yaw.Value }
+                    : position, _jsonOptions)
         };
 
         return _gateway.SendCommandAsync(message, cancellationToken);
@@ -104,7 +108,7 @@ public class Robot
             {
                 var dock = _mapManager.Dock.AcquireDock(node.NodeName);
                 if (dock == null) continue;
-                MoveTo(dock.Position);
+                MoveTo(dock.Position, dock.Yaw);
                 CurrentNode = node;
                 CurrentDock = dock;
                 break;

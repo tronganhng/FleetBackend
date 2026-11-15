@@ -67,7 +67,7 @@ public sealed class ElevatorTraversalTests
         await fleet.Command("OPEN_DOOR");
         Assert.False(fleet.Gateway.Messages.Reader.TryRead(out _));
         fleet.Transport.Receive(1, "DOOR_OPEN");
-        await fleet.Move("R1", fleet.Source.MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Source.MapPoints[0].Position, fleet.Source.MapPoints[0].Yaw);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class ElevatorTraversalTests
         var pickup = await fleet.Next(SocketMessageType.MoveElevator);
         Assert.Equal(1, pickup.Payload.Deserialize<MoveElevatorRequest>()!.TargetFloor);
         fleet.Simulation.NotifyArrived(new() { ElevatorId = Fleet.Elevator, CurrentFloor = 1, Status = ElevatorStatus.Idle });
-        await fleet.Move("R1", fleet.Source.MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Source.MapPoints[0].Position, fleet.Source.MapPoints[0].Yaw);
         trip.Traversal.OnRobotArrived();
         var ride = await fleet.Next(SocketMessageType.MoveElevator);
         Assert.Equal(2, ride.Payload.Deserialize<MoveElevatorRequest>()!.TargetFloor);
@@ -215,7 +215,7 @@ public sealed class ElevatorTraversalTests
         fleet.Transport.Receive(1, "DOOR_CLOSED");
         await fleet.Command("OPEN_DOOR");
         fleet.Transport.Receive(1, "DOOR_OPEN");
-        await fleet.Move("R1", fleet.Source.MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Source.MapPoints[0].Position, fleet.Source.MapPoints[0].Yaw);
 
         var sessions = new SessionManager(robots, fleet.Elevators, tasks, fleet.Traffic, fleet.Map, executors, fleet.Gateway, fleet.Json);
         sessions.StartNewSession(SystemMode.Simulation);
@@ -319,7 +319,7 @@ public sealed class ElevatorTraversalTests
         fleet.Transport.Receive(1, "DOOR_CLOSED");
         await fleet.Command("OPEN_DOOR");
         fleet.Transport.Receive(1, "DOOR_OPEN");
-        await fleet.Move("R1", fleet.Source.MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Source.MapPoints[0].Position, fleet.Source.MapPoints[0].Yaw);
         await Arrive();
         await fleet.Command("CLOSE_DOOR");
         fleet.Transport.Receive(1, "DOOR_CLOSED");
@@ -344,11 +344,11 @@ public sealed class ElevatorTraversalTests
         await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").Position);
         Assert.Empty(fleet.Store.GetAll());
         await Arrive();
-        await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").MapPoints[0].Position, fleet.Map.Graph.GetNode("room3").MapPoints[0].Yaw);
         await Arrive();
         await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").Position);
         await Arrive();
-        await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").MapPoints[0].Position);
+        await fleet.Move("R1", fleet.Map.Graph.GetNode("room3").MapPoints[0].Position, fleet.Map.Graph.GetNode("room3").MapPoints[0].Yaw);
         await Arrive();
         Assert.Equal(FleetBackend.Models.TaskStatus.Completed, task.Status);
         Assert.Equal(RobotStatus.Idle, robot.State.Status);
@@ -409,7 +409,7 @@ public sealed class ElevatorTraversalTests
             Transport.Receive(1, "DOOR_CLOSED");
             await Command("OPEN_DOOR");
             Transport.Receive(1, "DOOR_OPEN");
-            await Move(trip.Robot.State.RobotId, Source.MapPoints[0].Position);
+            await Move(trip.Robot.State.RobotId, Source.MapPoints[0].Position, Source.MapPoints[0].Yaw);
         }
 
         public async Task<SocketMessage> ReachMapChange(TripState trip)
@@ -433,11 +433,13 @@ public sealed class ElevatorTraversalTests
             return message;
         }
 
-        public async Task Move(string robotId, float[] position)
+        public async Task Move(string robotId, float[] position, float? yaw = null)
         {
             var message = await Next(SocketMessageType.MoveRobot);
             Assert.Equal(robotId, message.RobotId);
-            Assert.Equal(position, message.Payload.Deserialize<float[]>());
+            var expected = Gateway.SystemMode == SystemMode.Operation && yaw.HasValue
+                ? new[] { position[0], position[1], yaw.Value } : position;
+            Assert.Equal(expected, message.Payload.Deserialize<float[]>());
         }
 
         public async Task<ElevatorMqttCommand> Command(string command)
