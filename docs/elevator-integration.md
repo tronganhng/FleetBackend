@@ -11,97 +11,44 @@ a loopback broker; validation against the physical elevator is still outstanding
 Only the backend will send elevator commands in Operation. Disable elevator MQTT
 commands in the Python robot manager when enabling backend control.
 
-## MQTT
+## MQTT protocol v2
 
-Configuration section: `ElevatorMqtt` in `appsettings.json`, bound and validated at
-startup through `IOptions<ElevatorMqttOptions>`. This registration opens no network
-connection. The confirmed broker is `10.11.57.29:1883`, without credentials or TLS.
-Each running MQTT client needs a unique `ClientId`.
+The Operation adapter now requires the protocol in
+`elevator_manager/docs/mqtt_protocol_v2.md`. Update ESP firmware together with the
+client; legacy status messages cannot complete commands. ESP currently simulates
+floor/door state; acknowledgements are not physical sensor verification.
 
-Publish UTF-8 JSON to `elevator/request`, QoS 1, retain false. Subscribe to
-`elevator/status` before publishing commands, including after reconnect. Status
-publisher QoS, retained behavior and heartbeat availability remain unconfirmed.
+Requests on `elevator/request` use QoS 1, retain false, `protocol_version: 2`,
+`robot_id: robot3`, a process `session_id`, `trip_id`, unique `request_id`, increasing
+`command_seq`, and the observed ESP `boot_id`. Mutations expire after ten seconds
+of estimated ESP uptime. `CALL_ELEVATOR` includes `destination_floor` (1/2);
+`OPEN_DOOR`/`CLOSE_DOOR` include `expected_floor` (1/2). `GET_STATUS` discovers boot
+and state without moving or changing doors. Backend generates a trip UUID after acquiring elevator access and clears it at
+traversal end; manual reads use an empty trip ID. The trip UUID is distinct from
+the delivery task ID.
 
-The wire field `robot_id` is always `robot3`, the TurtleBot namespace. It is not
-`SocketMessage.RobotId`. It is fixed in `ElevatorMqttCommand`, rather than mutable
-configuration. There is no confirmed elevator ID or correlation ID on MQTT.
-One configured broker/topic pair represents one physical elevator, mapped to
-`ElevatorMqtt:ElevatorId` (default `Elevator_01`). Requests for another ID fail.
+Commands retry up to four times at two-second intervals using the identical
+envelope. Only a matching `COMPLETED` response plus actual floor/door state
+completes a command. `ACCEPTED` is intermediate; `REJECTED` fails immediately.
+Open requires `ROBOT_HOLD` owned by this backend session, not an automatic opening.
+Retained, legacy, malformed, duplicate/out-of-order, wrong-session and
+wrong-request replies cannot acknowledge commands. Sequence numbers reset only
+for a new ESP boot; retired boots cannot return.
 
-| Factory | Wire command | Completion evidence |
-| --- | --- | --- |
-| `GetStatus()` | `GET_STATUS` | Status update; no distinct acknowledgement |
-| `CallElevator(1 or 2)` | `CALL_ELEVATOR` | `ARRIVED` with the requested floor |
-| `OpenDoor()` | `OPEN_DOOR` | `DOOR_OPEN` at the established floor |
-| `CloseDoor()` | `CLOSE_DOOR` | `DOOR_CLOSED` at the established floor |
+A watchdog checks the five-second heartbeat deadline, including while waiting for
+robot boarding, map loading and exit. MQTT disconnect, ESP reboot or lost door hold
+signals traversal failure through the existing recovery path. This cancels robot
+work and preserves the physical resource lease; reconnect never resumes a trip.
+The firmware cannot stop already accepted elevator motion. Recovery remains an
+explicit operator action with cabin-empty confirmation and a fresh closed-door
+status. A hold owned by an earlier process cannot be silently released.
 
-Example: `{"robot_id":"robot3","command":"CALL_ELEVATOR","destination_floor":2}`.
-Commands other than `CALL_ELEVATOR` omit `destination_floor`.
-The user confirmed that the door stays open until `CLOSE_DOOR` is sent.
-
-`ElevatorMqttStatusPayload` represents one received message. Its nullable fields
-allow partial updates; unknown state strings and extra fields are preserved.
-Missing and explicit-null fields both deserialize to null. If that distinction
-is needed by the adapter, inspect the original JSON with `JsonDocument`.
-Never infer an arrival by combining a new floor with an old cached `ARRIVED`.
-MQTT publish completion does not mean the physical action completed. Fresh local
-receipt times alone cannot prove request correlation without device sequence IDs.
-
-## Adapter implementation (step 2)
-
-`ElevatorAdapterResolver.ForMode(mode)` selects an `IElevatorAdapter`. Resolve it
-once for a traversal. The interface exposes refresh, call, open and close methods,
-returning an immutable `ElevatorSnapshot` after confirmation or throwing on
-timeout, cancellation, unavailable transport or publish failure. Call timeouts are
-supplied explicitly so pickup and travel can use different settings.
-
-`MqttElevatorTransport` is a hosted MQTTnet service. `Enabled` defaults to false;
-even when enabled it connects only in Operation. It reconnects with a configured
-delay, subscribes at QoS 1, checks SUBACK, and sends `GET_STATUS` on every successful
-connection. No physical command is automatically replayed. Mode changes and host
-shutdown disconnect the client. The worker does not connect to the broker in
-Simulation. Subscribe QoS 1 does not establish the controller publisher's QoS.
-
-`MqttElevatorAdapter` preserves raw JSON, unknown states, receive timestamps and
-retained flags. Malformed messages are logged and ignored without stopping the
-receiver. Partial fields update cache independently. Completion requires a new,
-non-retained message: calls require floor and `ARRIVED` together; door commands
-conservatively require the expected floor and door state together. A state-only
-door message updates the cache but cannot complete the command until the actual
-device's partial-message semantics are established. Refresh accepts either valid
-field. This avoids treating an old cached floor as current confirmation.
-
-Commands are serialized per adapter instance with the waiter installed before
-publish. `LastCommand` records pending/completed/timed-out/cancelled/failed
-separately from the observed state. Disconnect fails a pending operation and
-preserves last-known data. `IsConnected` means the MQTT connection and subscription
-are ready; it does not prove controller liveness or freshness. Timeouts/cancellation
-do not stop physical motion. Trip ownership and recovery are managed by the
-traversal/traffic layer. Run a single backend process for this physical elevator;
-neither the in-process lock nor the local journal provides distributed locking.
-
-`SimulationElevatorAdapter` sends the existing Unity `MoveElevator` message and
-waits for `ElevatorArrived`. Its door methods are no-ops; refresh reads the
-registered simulation state. Its connection flag represents registered simulation
-availability, not a Unity socket health check. `ElevatorArrivedHandler` forwards
-simulation updates to the adapter and ignores them in Operation.
-
-`TaskExecutor` selects the configured physical `ElevatorId` in Operation, so no
-Unity elevator registration is needed there. Simulation still requires exactly
-one registered elevator. Both modes require one logical elevator node with a
-cabin point on each involved floor. Physical observations remain separate from
-legacy `Idle/Moving` simulation DTOs. The gateway rejects legacy Operation
-`MoveElevator`; traversal uses the MQTT adapter directly instead.
-
-MQTTnet API references: [client subscription example](https://github.com/dotnet/MQTTnet/blob/master/Samples/Client/Client_Subscribe_Samples.cs)
-and [client publishing example](https://github.com/dotnet/MQTTnet/blob/master/Samples/Client/Client_Publish_Samples.cs).
-The loopback integration test uses MQTTnet.Server as a test-only dependency; it
-checks QoS/retain, status receipt, disconnect/reconnect without replay and mode
-isolation without reaching the configured physical broker.
-
-Timeouts are configurable in seconds. Pickup (60), travel (120) and door (15)
-defaults follow the source client. Status (15) and robot floor readiness (120)
-are backend defaults, not device guarantees.
+Keep only one elevator command publisher enabled: disable Python elevator control
+when the backend owns the resource. The configured host in `appsettings.json` is
+preserved; align it with the actual ESP broker rather than assuming the example
+address in the upstream documentation. Each MQTT client needs a unique client ID.
+The transport subscribes before sending a v2 discovery read on each connection.
+Simulation still uses the Unity adapter with no MQTT/door commands.
 
 ## Backend to robot: movement yaw
 
@@ -168,7 +115,7 @@ separate protocol extension.
 
 1. Approach the source elevator node and wait for `RobotArrived`.
 2. Acquire exclusive traffic access. A waiting robot sends no elevator command.
-3. `GET_STATUS` must establish a fresh, non-retained full floor/state message.
+3. `GET_STATUS` must establish a correlated v2 completion with a fresh full snapshot.
 4. Journal the physical lease. If at another floor, call the pickup floor and
    wait for `ARRIVED`. If already at pickup, skip the same-floor call.
 5. Open the door and wait for `DOOR_OPEN`, then move into the cabin.

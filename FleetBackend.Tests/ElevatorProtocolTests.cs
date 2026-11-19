@@ -24,7 +24,7 @@ public class ElevatorProtocolTests
     {
         var payload = JsonSerializer.SerializeToElement(ElevatorMqttCommand.CallElevator(floor), Json);
 
-        Assert.Equal(3, payload.EnumerateObject().Count());
+        Assert.Equal(2, payload.GetProperty("protocol_version").GetInt32());
         Assert.Equal("robot3", payload.GetProperty("robot_id").GetString());
         Assert.Equal("CALL_ELEVATOR", payload.GetProperty("command").GetString());
         Assert.Equal(floor, payload.GetProperty("destination_floor").GetInt32());
@@ -42,7 +42,7 @@ public class ElevatorProtocolTests
         foreach (var (command, name) in commands)
         {
             var payload = JsonSerializer.SerializeToElement(command, Json);
-            Assert.Equal(2, payload.EnumerateObject().Count());
+            Assert.Equal(2, payload.GetProperty("protocol_version").GetInt32());
             Assert.Equal("robot3", payload.GetProperty("robot_id").GetString());
             Assert.Equal(name, payload.GetProperty("command").GetString());
             Assert.False(payload.TryGetProperty("destination_floor", out _));

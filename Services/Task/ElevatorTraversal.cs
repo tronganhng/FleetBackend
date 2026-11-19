@@ -101,6 +101,7 @@ public sealed class ElevatorTraversal : IDisposable
 
             if (_adapter.RequiresDoorControl)
             {
+                if (_adapter is MqttElevatorAdapter mqtt) mqtt.BeginTrip();
                 var status = await _adapter.RefreshAsync(_elevatorId, token);
                 lock (_gate)
                 {
@@ -250,6 +251,7 @@ public sealed class ElevatorTraversal : IDisposable
             _lifetime.Cancel();
             _traffic.AccessGranted -= OnAccessGranted;
             _adapter.Disconnected -= OnDisconnected;
+            if (_ownsAccess && _adapter is MqttElevatorAdapter mqtt) mqtt.EndTrip();
             if (_physicalLease)
             {
                 try { _recovery.RequireRecovery(_elevatorId, _robot.State.RobotId, _failureReason); }

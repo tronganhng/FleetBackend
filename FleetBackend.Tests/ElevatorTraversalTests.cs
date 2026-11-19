@@ -462,15 +462,18 @@ public sealed class ElevatorTraversalTests
         public bool IsReady { get; private set; } = true;
         public event Action<bool>? ConnectionChanged;
         public event Action<ElevatorMqttMessage>? MessageReceived;
+        private readonly ElevatorV2Fixture _esp = new();
+        private ElevatorMqttCommand? _last;
         public Channel<ElevatorMqttCommand> Commands { get; } = Channel.CreateUnbounded<ElevatorMqttCommand>();
         public Task PublishAsync(ElevatorMqttCommand command, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
+            _last = command;
             Commands.Writer.TryWrite(command);
             return Task.CompletedTask;
         }
         public void Receive(int floor, string state) => MessageReceived?.Invoke(new("elevator/status",
-            JsonSerializer.Serialize(new { current_floor = floor, state }), false));
+            _esp.Status(_last, floor, state), false));
         public void Disconnect() { IsReady = false; ConnectionChanged?.Invoke(false); }
     }
 

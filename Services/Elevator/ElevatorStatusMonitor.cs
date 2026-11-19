@@ -38,7 +38,7 @@ public sealed class ElevatorStatusMonitor(string elevatorId)
         }
     }
 
-    public void Receive(int? floor, string? state, string raw, string topic, bool retained)
+    public void Receive(int? floor, string? state, string raw, string topic, bool retained, bool allowCompletion = true)
     {
         lock (_gate)
         {
@@ -52,7 +52,7 @@ public sealed class ElevatorStatusMonitor(string elevatorId)
                 ReceivedAtUtc = now, RawPayload = raw, Topic = topic, IsRetained = retained
             };
             // Match this message, never merged cache. Retained data is display-only.
-            if (_snapshot.IsConnected && !retained && _pending != null && _matches!(floor, state))
+            if (allowCompletion && _snapshot.IsConnected && !retained && _pending != null && _matches!(floor, state))
                 _pending.TrySetResult(_snapshot);
         }
     }

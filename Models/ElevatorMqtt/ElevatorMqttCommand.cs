@@ -5,6 +5,17 @@ namespace FleetBackend.Models.ElevatorMqtt;
 // This namespace belongs to the TurtleBot integration, not the fleet robot registry.
 public sealed record ElevatorMqttCommand
 {
+    [JsonPropertyName("protocol_version")] public int ProtocolVersion => 2;
+    [JsonPropertyName("session_id")] public string SessionId { get; init; } = Guid.NewGuid().ToString("N");
+    [JsonPropertyName("trip_id")] public string TripId { get; init; } = "";
+    [JsonPropertyName("request_id")] public string RequestId { get; init; } = Guid.NewGuid().ToString("N");
+    [JsonPropertyName("command_seq")] public long CommandSeq { get; init; } = 1;
+    [JsonPropertyName("boot_id")] public string BootId { get; init; } = "";
+    [JsonPropertyName("expires_at_ms"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? ExpiresAtMs { get; init; }
+    [JsonPropertyName("expected_floor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ExpectedFloor { get; init; }
+
     [JsonPropertyName("robot_id")]
     public string RobotNamespace => "robot3";
 

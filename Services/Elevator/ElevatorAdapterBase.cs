@@ -11,11 +11,19 @@ public abstract class ElevatorAdapterBase(IOptions<ElevatorMqttOptions> options)
     protected ElevatorMqttOptions Options { get; } = options.Value;
     public abstract bool RequiresDoorControl { get; }
     public event Action<string>? Disconnected;
-    protected void SetConnected(string id, bool connected)
+    protected void SetConnected(string id, bool connected, bool notifyAsync = false)
     {
         var wasConnected = Monitor(id).Snapshot.IsConnected;
         Monitor(id).SetConnected(connected);
-        if (wasConnected && !connected) Disconnected?.Invoke(id);
+        if (wasConnected && !connected)
+        {
+            if (notifyAsync)
+            {
+                var handler = Disconnected;
+                ThreadPool.QueueUserWorkItem(_ => handler?.Invoke(id));
+            }
+            else Disconnected?.Invoke(id);
+        }
     }
     protected ElevatorStatusMonitor Monitor(string id) => _monitors.GetOrAdd(id, key => new(key));
     protected virtual void ValidateId(string id) => ArgumentException.ThrowIfNullOrWhiteSpace(id);

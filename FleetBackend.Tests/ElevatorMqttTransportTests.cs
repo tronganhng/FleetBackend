@@ -55,6 +55,13 @@ public sealed class ElevatorMqttTransportTests
             Assert.Equal("GET_STATUS", Command(startup));
             Assert.True(transport.IsReady);
 
+            var esp = new ElevatorV2Fixture();
+            await controller.PublishAsync(new MqttApplicationMessageBuilder().WithTopic("elevator/status")
+                .WithPayload(esp.Status()).Build());
+            using (var wait = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+                while (adapter.GetSnapshot("Elevator_01").CurrentFloor == null)
+                    await Task.Delay(10, wait.Token);
+
             var call = adapter.CallAsync("Elevator_01", 2, TimeSpan.FromSeconds(5));
             var request = await NextRequest();
             Assert.Equal("CALL_ELEVATOR", Command(request));
@@ -64,7 +71,7 @@ public sealed class ElevatorMqttTransportTests
             Assert.Equal("robot3", requestDocument.RootElement.GetProperty("robot_id").GetString());
             Assert.False(call.IsCompleted); // Broker PUBACK alone must not finish the operation.
             await controller.PublishAsync(new MqttApplicationMessageBuilder().WithTopic("elevator/status")
-                .WithPayload("{\"current_floor\":2,\"state\":\"ARRIVED\"}")
+                .WithPayload(StatusReply(request))
                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build());
             Assert.Equal(2, (await call.WaitAsync(TimeSpan.FromSeconds(5))).CurrentFloor);
 
@@ -90,6 +97,16 @@ public sealed class ElevatorMqttTransportTests
             await broker.StopAsync();
         }
 
+
+        string StatusReply(MqttApplicationMessage requestMessage)
+        {
+            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(requestMessage.ConvertPayloadToString())!;
+            var status = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(new ElevatorV2Fixture().Status(floor: 2))!;
+            status["status_seq"] = JsonSerializer.SerializeToElement(100);
+            foreach (var key in new[] { "session_id", "trip_id", "request_id", "command", "command_seq" }) status[key] = fields[key];
+            status["result"] = JsonSerializer.SerializeToElement("COMPLETED");
+            return JsonSerializer.Serialize(status);
+        }
         async Task<MqttApplicationMessage> NextRequest() =>
             await requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(8));
         static string? Command(MqttApplicationMessage message)

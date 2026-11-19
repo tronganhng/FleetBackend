@@ -21,146 +21,69 @@ public sealed class ElevatorAdapterTests
         Microsoft.Extensions.Options.Options.Create(new ElevatorMqttOptions()), NullLogger<MqttElevatorAdapter>.Instance);
 
     [Fact]
-    public async Task Call_WaitsForNewNonRetainedArrivalWithFloorInSameMessage()
+    public async Task V2_RequiresCorrelatedCompletedAndOwnedHold()
     {
         var transport = new FakeTransport();
         using var adapter = Adapter(transport);
-        transport.Receive("{\"current_floor\":2,\"state\":\"ARRIVED\"}");
-        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(5));
-        Assert.False(call.IsCompleted); // Cached arrival is not an acknowledgement.
-        transport.Receive("{\"current_floor\":2,\"state\":\"ARRIVED\"}", retained: true);
-        transport.Receive("{\"current_floor\":2}");
-        transport.Receive("{\"state\":\"ARRIVED\"}");
-        transport.Receive("{\"current_floor\":1,\"state\":\"ARRIVED\"}");
+        var esp = new ElevatorV2Fixture();
+        transport.Receive(esp.Status());
+        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(3));
+        var command = transport.Commands.Single();
+        Assert.Equal(2, command.ProtocolVersion);
+        Assert.NotNull(command.ExpiresAtMs);
+        transport.Receive(esp.Status(command, 2, result: "ACCEPTED"));
+        transport.Receive(esp.Status(command with { RequestId = "wrong" }, 2));
+        transport.Receive(esp.Status(command, 2), retained: true);
         Assert.False(call.IsCompleted);
-
-        transport.Receive("{\"current_floor\":2,\"state\":\"ARRIVED\"}");
-        var result = await call.WaitAsync(TimeSpan.FromSeconds(2));
-        Assert.Equal(2, result.CurrentFloor);
-        Assert.Equal(ElevatorCommandOutcome.Completed, result.LastCommand!.Outcome);
-        Assert.Single(transport.Commands);
+        transport.Receive(esp.Status(command, 2));
+        await call;
+        var open = adapter.OpenDoorAsync(Elevator, 2);
+        var door = transport.Commands.Last();
+        Assert.Equal(2, door.ExpectedFloor);
+        transport.Receive(esp.Status(door, 2, "DOOR_OPEN"));
+        await open;
+        var lost = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        adapter.Disconnected += _ => lost.TrySetResult();
+        transport.Receive(esp.Status(floor: 2));
+        await lost.Task.WaitAsync(TimeSpan.FromSeconds(1));
     }
 
     [Fact]
-    public async Task Waiter_IsInstalledBeforeSynchronousPublishResponse()
+    public async Task V2_RejectsLegacyAndRejectionsAndBootChanges()
     {
         var transport = new FakeTransport();
         using var adapter = Adapter(transport);
-        transport.OnPublish = _ => transport.Receive("{\"current_floor\":1,\"state\":\"ARRIVED\"}");
-        var result = await adapter.CallAsync(Elevator, 1, TimeSpan.FromSeconds(1));
-        Assert.Equal(ElevatorCommandOutcome.Completed, result.LastCommand!.Outcome);
-    }
-
-    [Theory]
-    [InlineData(true, "OPEN_DOOR", "DOOR_OPEN")]
-    [InlineData(false, "CLOSE_DOOR", "DOOR_CLOSED")]
-    public async Task Door_WaitsForExplicitStateAndCorrectFloor(bool open, string command, string state)
-    {
-        var transport = new FakeTransport();
-        using var adapter = Adapter(transport);
-        var operation = open ? adapter.OpenDoorAsync(Elevator, 1) : adapter.CloseDoorAsync(Elevator, 1);
-        Assert.Equal(command, transport.Commands.Single().Command);
+        var esp = new ElevatorV2Fixture();
         transport.Receive("{\"current_floor\":1,\"state\":\"ARRIVED\"}");
-        transport.Receive($"{{\"current_floor\":2,\"state\":\"{state}\"}}");
-        transport.Receive($"{{\"state\":\"{state}\"}}");
-        Assert.False(operation.IsCompleted);
-        transport.Receive($"{{\"current_floor\":1,\"state\":\"{state}\"}}");
-        Assert.Equal(state, (await operation.WaitAsync(TimeSpan.FromSeconds(2))).State);
-    }
-
-    [Fact]
-    public async Task PartialAndUnknownStatus_UpdateCacheButInvalidMessagesDoNotCorruptIt()
-    {
-        var transport = new FakeTransport();
-        using var adapter = Adapter(transport);
         Assert.Null(adapter.GetSnapshot(Elevator).CurrentFloor);
-        transport.Receive("{\"current_floor\":1}");
-        var floorAt = adapter.GetSnapshot(Elevator).FloorReceivedAtUtc;
-        transport.Receive("{\"state\":\"VENDOR_STATE\",\"vendor\":42}");
-        var snapshot = adapter.GetSnapshot(Elevator);
-        Assert.Equal(1, snapshot.CurrentFloor);
-        Assert.Equal(floorAt, snapshot.FloorReceivedAtUtc);
-        Assert.Equal("VENDOR_STATE", snapshot.State);
-        Assert.Contains("vendor", snapshot.RawPayload);
-
-        foreach (var invalid in new[] { "{", "null", "[]", "{\"current_floor\":\"2\"}",
-                     "{\"current_floor\":0}", "{\"current_floor\":null}", "{\"state\":3}", "{\"state\":\"\"}" })
-            transport.Receive(invalid);
-        transport.Receive("{\"current_floor\":2}", topic: "other/status");
-        Assert.Equal(snapshot, adapter.GetSnapshot(Elevator));
-
-        transport.OnPublish = _ => transport.Receive("{\"current_floor\":2}");
-        Assert.Equal(2, (await adapter.RefreshAsync(Elevator)).CurrentFloor);
-    }
-
-    [Fact]
-    public async Task Disconnect_FailsWaiterAndPreservesLastKnownDataWithoutReplayingCommand()
-    {
-        var transport = new FakeTransport();
-        using var adapter = Adapter(transport);
-        transport.Receive("{\"current_floor\":1,\"state\":\"DOOR_CLOSED\"}");
-        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(5));
-        transport.SetConnected(false);
+        transport.Receive(esp.Status());
+        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(3));
+        transport.Receive(esp.Status(transport.Commands.Last(), 1, result: "REJECTED"));
         await Assert.ThrowsAsync<IOException>(() => call);
-        Assert.False(adapter.GetSnapshot(Elevator).IsConnected);
-        Assert.Equal(1, adapter.GetSnapshot(Elevator).CurrentFloor);
-        Assert.Equal(ElevatorCommandOutcome.Failed, adapter.GetSnapshot(Elevator).LastCommand!.Outcome);
-        transport.SetConnected(true);
-        Assert.Single(transport.Commands);
+        var next = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(3));
+        transport.Receive(esp.Status(transport.Commands.Last(), 2, boot: "new-boot"));
+        await Assert.ThrowsAsync<IOException>(() => next);
     }
 
     [Fact]
-    public async Task TimeoutAndCancellation_DoNotRetryAndReleaseCommandSlot()
+    public async Task V2_RetryReusesEnvelopeAndHeartbeatLossFailsIdleHold()
     {
         var transport = new FakeTransport();
         using var adapter = Adapter(transport);
-        await Assert.ThrowsAsync<TimeoutException>(() => adapter.CallAsync(Elevator, 1, TimeSpan.FromMilliseconds(50)));
-        Assert.Equal(ElevatorCommandOutcome.TimedOut, adapter.GetSnapshot(Elevator).LastCommand!.Outcome);
-        using var cancellation = new CancellationTokenSource();
-        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(5), cancellation.Token);
-        cancellation.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => call);
-        Assert.Equal(ElevatorCommandOutcome.Cancelled, adapter.GetSnapshot(Elevator).LastCommand!.Outcome);
-        Assert.Equal(2, transport.Commands.Count);
-
-        transport.OnPublish = _ => transport.Receive("{\"current_floor\":1,\"state\":\"ARRIVED\"}");
-        await adapter.CallAsync(Elevator, 1, TimeSpan.FromSeconds(1));
-        Assert.Equal(3, transport.Commands.Count);
-    }
-
-    [Fact]
-    public async Task Commands_AreSerializedUntilPreviousStatusArrives()
-    {
-        var transport = new FakeTransport();
-        using var adapter = Adapter(transport);
-        var first = adapter.CallAsync(Elevator, 1, TimeSpan.FromSeconds(5));
-        var second = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(5));
-        Assert.Single(transport.Commands);
-        var secondSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var esp = new ElevatorV2Fixture();
+        transport.Receive(esp.Status());
         transport.OnPublish = command =>
         {
-            if (command.DestinationFloor == 2)
-            {
-                transport.Receive("{\"current_floor\":2,\"state\":\"ARRIVED\"}");
-                secondSent.TrySetResult();
-            }
+            if (transport.Commands.Count == 2)
+                transport.Receive(esp.Status(command, 1, "DOOR_OPEN"));
         };
-        transport.Receive("{\"current_floor\":1,\"state\":\"ARRIVED\"}");
-        await first.WaitAsync(TimeSpan.FromSeconds(2));
-        await secondSent.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        Assert.Equal(2, (await second).CurrentFloor);
-    }
-
-    [Fact]
-    public async Task WrongPhysicalElevatorOrFloor_IsRejectedBeforePublish()
-    {
-        var transport = new FakeTransport();
-        using var adapter = Adapter(transport);
-        await Assert.ThrowsAsync<ArgumentException>(() => adapter.CallAsync("other", 1, TimeSpan.FromSeconds(1)));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => adapter.OpenDoorAsync(Elevator, 3));
-        Assert.Empty(transport.Commands);
-        transport.SetConnected(false);
-        await Assert.ThrowsAsync<IOException>(() => adapter.RefreshAsync(Elevator));
+        await adapter.OpenDoorAsync(Elevator, 1);
+        Assert.Equal(2, transport.Commands.Count);
+        Assert.Equal(transport.Commands[0], transport.Commands[1]);
+        var failure = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        adapter.Disconnected += _ => failure.TrySetResult();
+        await failure.Task.WaitAsync(TimeSpan.FromSeconds(7));
+        Assert.False(adapter.GetSnapshot(Elevator).IsConnected);
     }
 
     [Fact]
