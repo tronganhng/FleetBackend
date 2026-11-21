@@ -65,7 +65,8 @@ public sealed class MqttElevatorAdapter : ElevatorAdapterBase, IDisposable
     {
         lock (_gate)
         {
-            if (!connected) { Fail("Elevator MQTT disconnected; recovery required."); _status = null; }
+            // Keep the last status so boot/seq checks survive reconnect; only freshness is reset.
+            if (!connected) { Fail("Elevator MQTT disconnected; recovery required."); _received = 0; }
             else SetConnected(Options.ElevatorId, true);
         }
     }
@@ -73,7 +74,7 @@ public sealed class MqttElevatorAdapter : ElevatorAdapterBase, IDisposable
     private void CheckHeartbeat()
     {
         lock (_gate)
-            if (_status.HasValue && !Fresh && GetSnapshot(Options.ElevatorId).IsConnected)
+            if (_received != 0 && !Fresh && GetSnapshot(Options.ElevatorId).IsConnected)
                 Fail("Elevator heartbeat missing for five seconds; recovery required.");
     }
 
@@ -150,32 +151,43 @@ public sealed class MqttElevatorAdapter : ElevatorAdapterBase, IDisposable
             lock (_gate)
             {
                 if (_retiredBoots.Contains(boot)) return;
+                var stale = false;
                 if (_status is { } old)
                 {
-                    if (old.GetProperty("boot_id").GetString() != boot)
+                    var oldBoot = old.GetProperty("boot_id").GetString()!;
+                    if (oldBoot != boot)
                     {
-                        _retiredBoots.Add(old.GetProperty("boot_id").GetString()!);
+                        _retiredBoots.Add(oldBoot);
                         Fail("ESP rebooted; recovery required.");
                     }
-                    else if (seq <= old.GetProperty("status_seq").GetInt64()) return;
+                    else stale = seq <= old.GetProperty("status_seq").GetInt64();
                 }
-                _status = data.Clone();
-                _received = Stopwatch.GetTimestamp();
-                if (_holdFloor is { } held && !Held(data, held)) Fail("Elevator door hold lost; recovery required.");
-                SetConnected(Options.ElevatorId, _transport.IsReady);
+                if (!stale)
+                {
+                    _status = data.Clone();
+                    _received = Stopwatch.GetTimestamp();
+                    if (_holdFloor is { } held && !Held(data, held)) Fail("Elevator door hold lost; recovery required.");
+                    SetConnected(Options.ElevatorId, _transport.IsReady);
+                }
+                // Match replies even when a newer heartbeat already arrived; judge completion on the latest state.
+                var current = _status!.Value;
+                floor = current.GetProperty("current_floor").GetInt32();
+                moving = current.GetProperty("moving").GetBoolean();
+                door = current.GetProperty("door_state").GetString();
                 var state = moving ? "MOVING" : door == "OPEN" ? "DOOR_OPEN" : "DOOR_CLOSED";
                 var matches = false;
                 if (_pending is { } request && _reply != null && !_reply.Task.IsCompleted &&
                     new[] { "robot_id", "session_id", "trip_id", "request_id", "command", "command_seq" }.All(key =>
                         data.TryGetProperty(key, out var value) && value.ToString() == JsonSerializer.SerializeToElement(request).GetProperty(key).ToString()))
                 {
-                    if (result == "REJECTED") _reply.TrySetException(new IOException($"ESP rejected {request.Command}: {data.GetProperty("error")}"));
+                    if (result == "REJECTED")
+                        _reply.TrySetException(new IOException($"ESP rejected {request.Command}: {(data.TryGetProperty("error", out var error) ? error.ToString() : "UNKNOWN")}"));
                     else if (result == "COMPLETED")
                     {
                         matches = request.Command == "GET_STATUS" || boot == request.BootId && request.Command switch
                         {
                             "CALL_ELEVATOR" => !moving && floor == request.DestinationFloor,
-                            "OPEN_DOOR" => Held(data, request.ExpectedFloor!.Value),
+                            "OPEN_DOOR" => Held(current, request.ExpectedFloor!.Value),
                             "CLOSE_DOOR" => !moving && floor == request.ExpectedFloor && door == "CLOSED",
                             _ => false
                         };
@@ -187,7 +199,7 @@ public sealed class MqttElevatorAdapter : ElevatorAdapterBase, IDisposable
                         }
                     }
                 }
-                Monitor(Options.ElevatorId).Receive(floor, state, message.Payload, message.Topic, false, matches);
+                if (!stale || matches) Monitor(Options.ElevatorId).Receive(floor, state, message.Payload, message.Topic, false, matches);
                 if (matches) _reply!.TrySetResult();
             }
         }

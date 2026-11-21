@@ -11,6 +11,7 @@ public sealed class ElevatorTraversal : IDisposable
     private enum Step { None, Approaching, WaitingForAccess, Pickup, OpeningPickup, Entering,
         ClosingPickup, Riding, OpeningDestination, ChangingMap, Exiting, ClosingDestination, Finished }
     private readonly Robot _robot;
+    private static readonly TimeSpan ExitDoorDelay = TimeSpan.FromSeconds(2);
     private readonly IMapManager _map;
     private readonly ITrafficManager _traffic;
     private readonly ICommunicationGateway _gateway;
@@ -147,6 +148,8 @@ public sealed class ElevatorTraversal : IDisposable
                 _mayBeInCabin = false;
             }
             SetStep(Step.ClosingDestination);
+            // Same settle time as elevator_manager EXIT_DOOR_DELAY before closing behind the robot.
+            if (_adapter.RequiresDoorControl) await System.Threading.Tasks.Task.Delay(ExitDoorDelay, token);
             await _adapter.CloseDoorAsync(_elevatorId, _destination.Floor, token);
             lock (_gate)
             {

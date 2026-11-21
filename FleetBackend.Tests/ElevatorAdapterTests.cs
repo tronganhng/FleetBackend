@@ -66,6 +66,25 @@ public sealed class ElevatorAdapterTests
     }
 
     [Fact]
+    public async Task V2_MatchesReplyOvertakenByHeartbeatAndRejectionWithoutError()
+    {
+        var transport = new FakeTransport();
+        using var adapter = Adapter(transport);
+        var esp = new ElevatorV2Fixture();
+        transport.Receive(esp.Status());
+        var call = adapter.CallAsync(Elevator, 2, TimeSpan.FromSeconds(3));
+        var reply = esp.Status(transport.Commands.Last(), 2);
+        transport.Receive(esp.Status(floor: 2)); // newer heartbeat arrives first
+        transport.Receive(reply);
+        await call;
+        var next = adapter.CallAsync(Elevator, 1, TimeSpan.FromSeconds(3));
+        transport.Receive(esp.Status(transport.Commands.Last(), 2, result: "REJECTED")
+            .Replace(",\"error\":\"TEST_REJECTED\"", ""));
+        var error = await Assert.ThrowsAsync<IOException>(() => next);
+        Assert.Contains("UNKNOWN", error.Message);
+    }
+
+    [Fact]
     public async Task V2_RetryReusesEnvelopeAndHeartbeatLossFailsIdleHold()
     {
         var transport = new FakeTransport();
