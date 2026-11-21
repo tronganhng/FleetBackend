@@ -204,7 +204,7 @@
       "NodeType": 3,
       "Floor": 1,
       "Position": [
-        -3.64,
+        -3.312,
         2.48
       ],
       "MapPoints": [
@@ -223,7 +223,7 @@
       "NodeType": 3,
       "Floor": 2,
       "Position": [
-        -3.77,
+        -3.326,
         7.27
       ],
       "MapPoints": [
@@ -252,7 +252,7 @@
     {
       "StartNode": "junction1",
       "EndNode": "elevator",
-      "Distance": 5.25083828
+      "Distance": 5.116953
     },
     {
       "StartNode": "junction1",
@@ -262,12 +262,12 @@
     {
       "StartNode": "elevator",
       "EndNode": "elevator2",
-      "Distance": 7.67860651
+      "Distance": 7.677519
     },
     {
       "StartNode": "room4",
       "EndNode": "elevator2",
-      "Distance": 3.837408
+      "Distance": 3.65512753
     },
     {
       "StartNode": "room4",
